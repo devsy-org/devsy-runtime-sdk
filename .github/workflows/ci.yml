@@ -77,7 +77,15 @@ jobs:
           private-key: ${{ secrets.DEVSY_GITHUB_APP_PRIVATE_KEY }}
           repositories: ${{ github.event.repository.name }}
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+        id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ steps.app-token.outputs.token }}
+      - name: Enable release PR auto-merge
+        if: steps.release.outputs.pr
+        run: gh pr merge --auto --squash "$RELEASE_PR_NUMBER"
+        env:
+          RELEASE_PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
