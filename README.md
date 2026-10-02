@@ -83,9 +83,3 @@ mise exec -- go generate ./...
 ```
 
 Generation pins protoc and both Go plugins. CI runs independent Pre-commit (prek) and Lint checks, rejects generated-code drift, and runs race-enabled tests on Linux, macOS, and Windows. Tests launch a real plugin executable and cover negotiation, discovery, binary Exec channels, terminal exit, cancellation, and process cleanup. These transport tests do not certify a driver's complete lifecycle implementation.
-
-## Releases
-
-Release Please prepares version and changelog PRs from Conventional Commits after main-branch CI passes. The workflow requests automatic squash merging for release PRs, subject to repository branch protection requirements. After a release PR merges and main-branch CI passes again, the workflow publishes its Go module tag and GitHub release. The initial release is `v0.1.0`; before v1, `fix:` and `feat:` increment the patch version, while breaking changes increment the minor version, matching Devsy providers. SDK module versions are separate from the Runtime Protocol API version.
-
-The release job uses the Devsy GitHub App to allow CI to run on release PRs. Repository maintainers must grant the app access to this repository and expose `DEVSY_GITHUB_APP_ID` and `DEVSY_GITHUB_APP_PRIVATE_KEY` as Actions secrets, with contents and pull-request write permissions for the app.
