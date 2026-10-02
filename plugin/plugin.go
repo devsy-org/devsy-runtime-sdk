@@ -11,7 +11,9 @@ import (
 )
 
 const (
-	Name            = "devsy-runtime"
+	// Name is the logical registry key shared by every runtime implementation.
+	Name = "devsy-runtime"
+	// ProtocolVersion selects the breaking go-plugin application generation.
 	ProtocolVersion = 1
 )
 
@@ -21,6 +23,8 @@ func Handshake() hplugin.HandshakeConfig {
 	return hplugin.HandshakeConfig{ProtocolVersion: ProtocolVersion, MagicCookieKey: "DEVSY_RUNTIME_PLUGIN", MagicCookieValue: "devsy-runtime-v1"}
 }
 
+// Runtime bridges one RuntimeDriver implementation to the gRPC-only plugin ABI.
+// Server processes set Implementation; client registries leave it unset.
 type Runtime struct {
 	hplugin.NetRPCUnsupportedPlugin
 	Implementation runtimev1.RuntimeDriverServer
@@ -28,6 +32,8 @@ type Runtime struct {
 
 var _ hplugin.GRPCPlugin = (*Runtime)(nil)
 
+// GRPCServer is called once by go-plugin; the serving executable must supply
+// Implementation before registration.
 func (p *Runtime) GRPCServer(_ *hplugin.GRPCBroker, s *grpc.Server) error {
 	if p.Implementation == nil {
 		return errors.New("runtime server implementation is required")
@@ -36,6 +42,7 @@ func (p *Runtime) GRPCServer(_ *hplugin.GRPCBroker, s *grpc.Server) error {
 	return nil
 }
 
+// GRPCClient binds the generated client to the connection owned by go-plugin.
 func (*Runtime) GRPCClient(_ context.Context, _ *hplugin.GRPCBroker, conn *grpc.ClientConn) (any, error) {
 	return runtimev1.NewRuntimeDriverClient(conn), nil
 }

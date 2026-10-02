@@ -14,18 +14,20 @@ Implement `runtimev1.RuntimeDriverServer`, embedding `UnimplementedRuntimeDriver
 
 The cookie checks identity; it does not authenticate or sandbox the executable. Business diagnostics belong on stderr. Exec stdout/stderr travel only through gRPC frames.
 
-See [the protocol contract](docs/protocol-v1.md) for lifecycle, streaming, error, and compatibility semantics.
+See [the protocol contract](https://devsy.sh/docs/developing-providers/runtime-protocol) for lifecycle, streaming, error, and compatibility semantics.
 
 ## Development
 
 ```sh
 mise install
+mise exec -- buf lint
+mise exec -- buf format --diff --exit-code
 mise exec -- go generate ./...
 mise exec -- go test -race ./...
 mise exec -- go vet ./...
 mise exec -- golangci-lint run
 ```
 
-Generation pins both Go plugins and protoc. Generated files are checked in, so SDK consumers do not need protoc. CI regenerates bindings and rejects drift.
+Generation pins both Go plugins and protoc. Generated files are checked in, so SDK consumers do not need protoc. CI validates and formats the schema using the declared `proto/` import root, regenerates bindings, and rejects drift. Git hooks are configured in `prek.toml`; run `mise exec -- prek run --all-files` before committing.
 
 Tests build and launch a real plugin executable, including a path with spaces. They cover negotiation, Info, binary Exec channels, terminal exit, cancellation, and process reaping. The executable is a transport fixture, not the B2 fake runtime or the B3 conformance suite. Full lifecycle conformance, process-tree stress, and host startup benchmarks are the next workstream gates.

@@ -3,7 +3,9 @@ package runtimev1
 import "fmt"
 
 const (
+	// APIMajor changes when the runtime wire contract breaks compatibility.
 	APIMajor uint32 = 1
+	// APIMinor tracks compatible additions within the current major generation.
 	APIMinor uint32 = 0
 	// ChunkSize is the recommended maximum payload for each Exec data frame.
 	ChunkSize = 32 * 1024
