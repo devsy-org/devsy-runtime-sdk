@@ -77,15 +77,30 @@ jobs:
           private-key: ${{ secrets.DEVSY_GITHUB_APP_PRIVATE_KEY }}
           repositories: ${{ github.event.repository.name }}
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
-        id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ steps.app-token.outputs.token }}
       - name: Enable release PR auto-merge
-        if: steps.release.outputs.pr
-        run: gh pr merge --auto --squash "$RELEASE_PR_NUMBER"
+        shell: bash
+        run: |
+          release_pr="$(gh pr list --state open --base main \
+            --head release-please--branches--main --label 'autorelease: pending' \
+            --json number --jq '.[].number')"
+          if [[ -z "$release_pr" ]]; then
+            echo "No pending release PR."
+            exit 0
+          fi
+          if [[ ! "$release_pr" =~ ^[0-9]+$ ]]; then
+            echo "Expected exactly one pending release PR." >&2
+            exit 1
+          fi
+          release_head="$(gh pr view "$release_pr" --json headRefOid --jq .headRefOid)"
+          behind="$(gh api "repos/$GH_REPO/compare/main...$release_head" --jq .behind_by)"
+          if [[ "$behind" -gt 0 ]]; then
+            gh pr update-branch "$release_pr"
+          fi
+          gh pr merge --auto --squash "$release_pr"
         env:
-          RELEASE_PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
