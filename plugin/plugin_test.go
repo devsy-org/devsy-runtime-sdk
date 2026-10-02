@@ -210,13 +210,14 @@ func TestExecEmptyInput(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := readExecResult(t, stream)
-	if len(result.stdout) != 0 {
+	if result.stdoutFrames != 0 {
 		t.Fatal("unexpected stdout for empty stdin")
 	}
 }
 
 type execResult struct {
 	stdout, stderr []byte
+	stdoutFrames   int
 	exited         bool
 }
 
@@ -246,6 +247,7 @@ func (r *execResult) accept(t *testing.T, frame *runtimev1.ExecServerMessage) {
 	}
 	switch p := frame.Payload.(type) {
 	case *runtimev1.ExecServerMessage_Stdout:
+		r.stdoutFrames++
 		r.stdout = append(r.stdout, p.Stdout.Data...)
 	case *runtimev1.ExecServerMessage_Stderr:
 		r.stderr = append(r.stderr, p.Stderr.Data...)
