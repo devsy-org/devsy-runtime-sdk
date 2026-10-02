@@ -43,6 +43,7 @@ linters:
     cyclop:
       max-complexity: 8
     revive:
+      enable-default-rules: true
       rules:
         - name: argument-limit
           arguments: [4]
@@ -50,3 +51,31 @@ linters:
           arguments: [3]
         - name: blank-imports
         - name: nested-structs
+        - name: atomic
+        - name: bool-literal-in-expr
+        - name: confusing-results
+        - name: constant-logical-expr
+        - name: datarace
+        - name: defer
+        - name: early-return
+        - name: identical-branches
+        - name: identical-ifelseif-branches
+        - name: identical-ifelseif-conditions
+        - name: identical-switch-branches
+        - name: identical-switch-conditions
+        - name: import-shadowing
+        - name: modifies-value-receiver
+        - name: range-val-address
+        - name: range-val-in-closure
+        - name: redefines-builtin-id
+        - name: string-of-int
+        - name: time-equal
+        - name: unchecked-type-assertion
+        - name: unconditional-recursion
+        - name: unnecessary-format
+        - name: unnecessary-stmt
+        - name: unreachable-code
+        - name: unsecure-url-scheme
+        - name: use-any
+        - name: use-errors-new
+        - name: waitgroup-by-value

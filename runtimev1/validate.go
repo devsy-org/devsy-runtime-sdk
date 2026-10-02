@@ -1,6 +1,10 @@
+// Package runtimev1 provides Runtime Protocol v1 messages, RPC bindings, and compatibility validation.
 package runtimev1
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 const (
 	// APIMajor changes when the runtime wire contract breaks compatibility.
@@ -16,7 +20,7 @@ const (
 // values are rejected rather than silently selecting an unsafe policy.
 func ValidateInfo(info *InfoResponse) error {
 	if info == nil {
-		return fmt.Errorf("runtime Info response is missing")
+		return errors.New("runtime Info response is missing")
 	}
 	if info.ApiMajor != APIMajor {
 		return fmt.Errorf(
@@ -31,14 +35,14 @@ func ValidateInfo(info *InfoResponse) error {
 		)
 	}
 	if info.DriverName == "" || info.DriverVersion == "" || info.RuntimeName == "" {
-		return fmt.Errorf("runtime Info requires driver name, driver version, and runtime name")
+		return errors.New("runtime Info requires driver name, driver version, and runtime name")
 	}
 	return validateCapabilities(info.DriverName, info.Capabilities)
 }
 
 func validateCapabilities(driverName string, caps *Capabilities) error {
 	if caps == nil {
-		return fmt.Errorf("runtime Info capabilities are missing")
+		return errors.New("runtime Info capabilities are missing")
 	}
 	if caps.RecreateMode != RecreateMode_RECREATE_MODE_DELETE &&
 		caps.RecreateMode != RecreateMode_RECREATE_MODE_STOP {
