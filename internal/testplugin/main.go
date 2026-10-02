@@ -17,9 +17,20 @@ type fixture struct {
 }
 
 func (*fixture) Info(context.Context, *runtimev1.InfoRequest) (*runtimev1.InfoResponse, error) {
-	return &runtimev1.InfoResponse{ApiMajor: runtimev1.APIMajor, DriverName: "transport-fixture", DriverVersion: "0.0.0", RuntimeName: "fake", Capabilities: &runtimev1.Capabilities{RecreateMode: runtimev1.RecreateMode_RECREATE_MODE_STOP}}, nil
+	return &runtimev1.InfoResponse{
+		ApiMajor:      runtimev1.APIMajor,
+		DriverName:    "transport-fixture",
+		DriverVersion: "0.0.0",
+		RuntimeName:   "fake",
+		Capabilities: &runtimev1.Capabilities{
+			RecreateMode: runtimev1.RecreateMode_RECREATE_MODE_STOP,
+		},
+	}, nil
 }
-func (*fixture) Exec(stream grpc.BidiStreamingServer[runtimev1.ExecClientMessage, runtimev1.ExecServerMessage]) error {
+
+func (*fixture) Exec(
+	stream grpc.BidiStreamingServer[runtimev1.ExecClientMessage, runtimev1.ExecServerMessage],
+) error {
 	first, err := stream.Recv()
 	if err != nil {
 		return err
@@ -35,22 +46,46 @@ func (*fixture) Exec(stream grpc.BidiStreamingServer[runtimev1.ExecClientMessage
 		if err != nil {
 			return err
 		}
-		switch payload := frame.Payload.(type) {
-		case *runtimev1.ExecClientMessage_Stdin:
-			if len(payload.Stdin) == 0 {
-				return status.Error(codes.InvalidArgument, "stdin data frames must be nonempty")
-			}
-			if err := stream.Send(&runtimev1.ExecServerMessage{Payload: &runtimev1.ExecServerMessage_Stdout{Stdout: &runtimev1.OutputChunk{Data: payload.Stdin}}}); err != nil {
-				return err
-			}
-		case *runtimev1.ExecClientMessage_CloseStdin:
-			if err := stream.Send(&runtimev1.ExecServerMessage{Payload: &runtimev1.ExecServerMessage_Stderr{Stderr: &runtimev1.OutputChunk{Data: []byte("diagnostic")}}}); err != nil {
-				return err
-			}
-			return stream.Send(&runtimev1.ExecServerMessage{Payload: &runtimev1.ExecServerMessage_Exit{Exit: &runtimev1.ExecExit{ExitCode: 7}}})
-		default:
-			return status.Error(codes.InvalidArgument, "unexpected Exec frame")
+		if _, ok := frame.Payload.(*runtimev1.ExecClientMessage_CloseStdin); ok {
+			return sendExit(stream)
+		}
+		if err := echoStdin(stream, frame); err != nil {
+			return err
 		}
 	}
 }
+
+func echoStdin(
+	stream grpc.BidiStreamingServer[runtimev1.ExecClientMessage, runtimev1.ExecServerMessage],
+	frame *runtimev1.ExecClientMessage,
+) error {
+	payload, ok := frame.Payload.(*runtimev1.ExecClientMessage_Stdin)
+	if !ok {
+		return status.Error(codes.InvalidArgument, "unexpected Exec frame")
+	}
+	if len(payload.Stdin) == 0 {
+		return status.Error(codes.InvalidArgument, "stdin data frames must be nonempty")
+	}
+	return stream.Send(&runtimev1.ExecServerMessage{
+		Payload: &runtimev1.ExecServerMessage_Stdout{
+			Stdout: &runtimev1.OutputChunk{Data: payload.Stdin},
+		},
+	})
+}
+
+func sendExit(
+	stream grpc.BidiStreamingServer[runtimev1.ExecClientMessage, runtimev1.ExecServerMessage],
+) error {
+	if err := stream.Send(&runtimev1.ExecServerMessage{
+		Payload: &runtimev1.ExecServerMessage_Stderr{
+			Stderr: &runtimev1.OutputChunk{Data: []byte("diagnostic")},
+		},
+	}); err != nil {
+		return err
+	}
+	return stream.Send(&runtimev1.ExecServerMessage{
+		Payload: &runtimev1.ExecServerMessage_Exit{Exit: &runtimev1.ExecExit{ExitCode: 7}},
+	})
+}
+
 func main() { server.Serve(&fixture{}) }

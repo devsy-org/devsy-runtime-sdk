@@ -1,8 +1,52 @@
 version: "2"
 run:
-  timeout: 5m
-linters:
-  default: standard
+  timeout: 10m
+  concurrency: 8
 formatters:
   enable:
-    - gofmt
+    - gci
+    - gofumpt
+    - goimports
+    - golines
+  exclusions:
+    paths:
+      - ".*\\.pb\\.go$"
+linters:
+  enable:
+    - cyclop
+    - decorder
+    - dupl
+    - errcheck
+    - fatcontext
+    - forbidigo
+    - funcorder
+    - funlen
+    - goconst
+    - gocritic
+    - godot
+    - gosec
+    - lll
+    - misspell
+    - modernize
+    - nestif
+    - revive
+    - staticcheck
+    - unparam
+    - unused
+    - whitespace
+  exclusions:
+    rules:
+      - path: ".*\\.pb\\.go$"
+        linters:
+          - lll
+  settings:
+    cyclop:
+      max-complexity: 8
+    revive:
+      rules:
+        - name: argument-limit
+          arguments: [4]
+        - name: function-result-limit
+          arguments: [3]
+        - name: blank-imports
+        - name: nested-structs

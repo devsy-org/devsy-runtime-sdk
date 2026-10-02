@@ -1,33 +1,91 @@
 # Devsy Runtime SDK
 
-Runtime Protocol v1 and shared gRPC serving tools for trusted external Devsy runtime drivers.
+Go bindings and gRPC serving tools for external Devsy runtime drivers. The SDK defines Runtime Protocol v1 and lets a host launch a runtime executable using [go-plugin](https://github.com/hashicorp/go-plugin).
 
-This is Workstream B1 of the runtime campaign. The SDK is independent of the Devsy Go module. Devsy retains image preparation, Dev Container orchestration, agent delivery, and workspace state.
+Runtime drivers implement resource lifecycle operations and command execution. Devsy handles image preparation, Dev Container orchestration, agent delivery, and workspace state. The SDK is an independent Go module; consumers do not need to import Devsy itself.
+
+## Installation
+
+Requires Go 1.26 or newer:
+
+```sh
+go get github.com/devsy-org/devsy-runtime-sdk
+```
+
+Generated protobuf bindings are included. Consumers do not need protoc or the development tools listed below.
 
 ## Packages
 
-- `runtimev1`: generated protobuf/gRPC bindings, API versions, and Info validation.
+- `runtimev1`: protobuf/gRPC bindings, API versions, and `ValidateInfo` for compatibility checks.
 - `plugin`: shared handshake, plugin name, and gRPC registration/client bridge.
 - `server`: executable serving entry point.
 
-Implement `runtimev1.RuntimeDriverServer`, embedding `UnimplementedRuntimeDriverServer` by value, and call `server.Serve` from your executable's main function. Hosts use `plugin.Handshake()` and `plugin.ClientPlugins()` with gRPC as the only allowed transport. The host owns executable resolution, startup timeout, cancellation, and `Client.Kill()` cleanup.
+## Implementing a runtime
 
-The cookie checks identity; it does not authenticate or sandbox the executable. Business diagnostics belong on stderr. Exec stdout/stderr travel only through gRPC frames.
+Implement `runtimev1.RuntimeDriverServer`, embedding `UnimplementedRuntimeDriverServer` by value, and call `server.Serve` from your executable's main function. This minimal example implements discovery:
 
-See [the protocol contract](https://devsy.sh/docs/developing-providers/runtime-protocol) for lifecycle, streaming, error, and compatibility semantics.
+```go
+package main
+
+import (
+    "context"
+
+    "github.com/devsy-org/devsy-runtime-sdk/runtimev1"
+    "github.com/devsy-org/devsy-runtime-sdk/server"
+)
+
+type driver struct {
+    runtimev1.UnimplementedRuntimeDriverServer
+}
+
+func (*driver) Info(context.Context, *runtimev1.InfoRequest) (*runtimev1.InfoResponse, error) {
+    return &runtimev1.InfoResponse{
+        ApiMajor:      runtimev1.APIMajor,
+        ApiMinor:      runtimev1.APIMinor,
+        DriverName:    "example-runtime",
+        DriverVersion: "0.1.0",
+        RuntimeName:   "example",
+        Capabilities: &runtimev1.Capabilities{
+            RecreateMode: runtimev1.RecreateMode_RECREATE_MODE_STOP,
+        },
+    }, nil
+}
+
+func main() {
+    server.Serve(&driver{})
+}
+```
+
+The remaining RPCs return `Unimplemented` until you override them. A usable driver must implement lifecycle operations and Exec with behavior consistent with its advertised capabilities.
+
+Hosts configure a go-plugin client with `plugin.Handshake()`, `plugin.ProtocolVersion`, and `plugin.ClientPlugins()`, allowing only `go-plugin.ProtocolGRPC`. The host owns trusted executable resolution, startup timeout, cancellation, and `Client.Kill()` cleanup. Call `runtimev1.ValidateInfo` before invoking runtime operations: API majors must match, while newer minor versions within the same major are compatible.
+
+The handshake cookie checks identity; it does not authenticate or sandbox the executable. Business diagnostics belong on stderr. Exec stdout and stderr travel through gRPC frames, preserve binary data, and end with a terminal exit frame. Cancellation must stop the command and release its resources.
+
+See the [Runtime Protocol reference](https://devsy.sh/docs/developing-providers/runtime-protocol) for the complete lifecycle, streaming, error, and compatibility contract.
 
 ## Development
 
 ```sh
 mise install
-mise exec -- buf lint
-mise exec -- buf format --diff --exit-code
-mise exec -- go generate ./...
+mise exec -- prek install
+mise exec -- prek run --all-files
 mise exec -- go test -race ./...
 mise exec -- go vet ./...
-mise exec -- golangci-lint run
 ```
 
-Generation pins both Go plugins and protoc. Generated files are checked in, so SDK consumers do not need protoc. CI validates and formats the schema using the declared `proto/` import root, regenerates bindings, and rejects drift. Git hooks are configured in `prek.toml`; run `mise exec -- prek run --all-files` before committing.
+`prek.toml` runs Go linting and formatting plus protobuf schema checks. Linting follows Devsy's rules, including complexity, error handling, security, and API style checks. To apply Go formatting, run `mise exec -- golangci-lint fmt`.
 
-Tests build and launch a real plugin executable, including a path with spaces. They cover negotiation, Info, binary Exec channels, terminal exit, cancellation, and process reaping. The executable is a transport fixture, not the B2 fake runtime or the B3 conformance suite. Full lifecycle conformance, process-tree stress, and host startup benchmarks are the next workstream gates.
+After changing the schema, regenerate the checked-in bindings:
+
+```sh
+mise exec -- go generate ./...
+```
+
+Generation pins protoc and both Go plugins. CI runs prek, rejects generated-code drift, and runs race-enabled tests on Linux, macOS, and Windows. Tests launch a real plugin executable and cover negotiation, discovery, binary Exec channels, terminal exit, cancellation, and process cleanup. These transport tests do not certify a driver's complete lifecycle implementation.
+
+## Releases
+
+Release Please prepares version and changelog PRs from Conventional Commits after main-branch CI passes. Merging a release PR publishes its Go module tag and GitHub release after CI passes again. The initial release is `v0.1.0`; before v1, `fix:` and `feat:` increment the patch version, while breaking changes increment the minor version, matching Devsy providers. SDK module versions are separate from the Runtime Protocol API version.
+
+The release job uses the Devsy GitHub App to allow CI to run on release PRs. Repository maintainers must grant the app access to this repository and expose `DEVSY_GITHUB_APP_ID` and `DEVSY_GITHUB_APP_PRIVATE_KEY` as Actions secrets, with contents and pull-request write permissions for the app.

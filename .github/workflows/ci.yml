@@ -24,7 +24,7 @@ jobs:
       - run: go test -race ./...
       - run: go vet ./...
   generated:
-    name: Generated bindings and lint
+    name: Generated bindings
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -36,6 +36,37 @@ jobs:
       - run: buf format --diff --exit-code
       - run: go generate ./...
       - run: git diff --exit-code
-      - run: golangci-lint run
-      - run: golangci-lint fmt --diff
+  prek:
+    name: Prek
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
       - run: prek run --all-files
+  release-please:
+    name: Release Please
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, generated, prek]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-please
+      cancel-in-progress: false
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        id: app-token
+        with:
+          app-id: ${{ secrets.DEVSY_GITHUB_APP_ID }}
+          private-key: ${{ secrets.DEVSY_GITHUB_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ steps.app-token.outputs.token }}

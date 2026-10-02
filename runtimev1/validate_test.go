@@ -11,7 +11,13 @@ import (
 )
 
 func validInfo() *v1.InfoResponse {
-	return &v1.InfoResponse{ApiMajor: 1, DriverName: "fake", DriverVersion: "1.0", RuntimeName: "backend", Capabilities: &v1.Capabilities{RecreateMode: v1.RecreateMode_RECREATE_MODE_STOP}}
+	return &v1.InfoResponse{
+		ApiMajor:      1,
+		DriverName:    "fake",
+		DriverVersion: "1.0",
+		RuntimeName:   "backend",
+		Capabilities:  &v1.Capabilities{RecreateMode: v1.RecreateMode_RECREATE_MODE_STOP},
+	}
 }
 
 func TestValidateInfo(t *testing.T) {
@@ -21,13 +27,29 @@ func TestValidateInfo(t *testing.T) {
 		want   string
 	}{
 		{"future minor", func(i *v1.InfoResponse) { i.ApiMinor = 99 }, ""},
-		{"different major", func(i *v1.InfoResponse) { i.ApiMajor = 2 }, "install a runtime supporting API major 1"},
+		{
+			"different major",
+			func(i *v1.InfoResponse) { i.ApiMajor = 2 },
+			"install a runtime supporting API major 1",
+		},
 		{"empty name", func(i *v1.InfoResponse) { i.DriverName = "" }, "driver name"},
 		{"missing capabilities", func(i *v1.InfoResponse) { i.Capabilities = nil }, "capabilities"},
-		{"unknown recreate", func(i *v1.InfoResponse) { i.Capabilities.RecreateMode = 99 }, "recreate mode"},
-		{"unknown mount", func(i *v1.InfoResponse) { i.Capabilities.MountTypes = []v1.MountType{99} }, "mount type"},
+		{
+			"unknown recreate",
+			func(i *v1.InfoResponse) { i.Capabilities.RecreateMode = 99 },
+			"recreate mode",
+		},
+		{
+			"unknown mount",
+			func(i *v1.InfoResponse) { i.Capabilities.MountTypes = []v1.MountType{99} },
+			"mount type",
+		},
 		{"supported mounts", func(i *v1.InfoResponse) {
-			i.Capabilities.MountTypes = []v1.MountType{v1.MountType_MOUNT_TYPE_BIND, v1.MountType_MOUNT_TYPE_VOLUME, v1.MountType_MOUNT_TYPE_TMPFS}
+			i.Capabilities.MountTypes = []v1.MountType{
+				v1.MountType_MOUNT_TYPE_BIND,
+				v1.MountType_MOUNT_TYPE_VOLUME,
+				v1.MountType_MOUNT_TYPE_TMPFS,
+			}
 		}, ""},
 	}
 	for _, tc := range cases {
@@ -65,7 +87,12 @@ func TestOptionalFlagsPreservePresence(t *testing.T) {
 }
 
 func TestStructuredErrorDetails(t *testing.T) {
-	detail := &v1.RuntimeError{Code: v1.RuntimeErrorCode_RUNTIME_ERROR_CODE_NOT_FOUND, Message: "workspace absent", RuntimeMessage: "backend diagnostic", Retryable: false}
+	detail := &v1.RuntimeError{
+		Code:           v1.RuntimeErrorCode_RUNTIME_ERROR_CODE_NOT_FOUND,
+		Message:        "workspace absent",
+		RuntimeMessage: "backend diagnostic",
+		Retryable:      false,
+	}
 	s, err := status.New(codes.NotFound, detail.Message).WithDetails(detail)
 	if err != nil {
 		t.Fatal(err)
