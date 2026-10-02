@@ -163,3 +163,74 @@ func TestExecCancellation(t *testing.T) {
 		t.Fatalf("cancel returned %v", err)
 	}
 }
+
+func TestExecRejectsMalformedFrames(t *testing.T) {
+	start := &runtimev1.ExecClientMessage{Payload: &runtimev1.ExecClientMessage_Start{Start: &runtimev1.ExecStart{}}}
+	cases := []struct {
+		name   string
+		frames []*runtimev1.ExecClientMessage
+	}{
+		{"missing start", []*runtimev1.ExecClientMessage{{}}},
+		{"second start", []*runtimev1.ExecClientMessage{start, start}},
+		{"unset payload", []*runtimev1.ExecClientMessage{start, {}}},
+		{"empty data frame", []*runtimev1.ExecClientMessage{start, {Payload: &runtimev1.ExecClientMessage_Stdin{Stdin: []byte{}}}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			stream, err := runtimeClient(t).Exec(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, frame := range tc.frames {
+				if err := stream.Send(frame); err != nil && err != io.EOF {
+					t.Fatal(err)
+				}
+			}
+			_, err = stream.Recv()
+			if status.Code(err) != codes.InvalidArgument {
+				t.Fatalf("got %v, want InvalidArgument", err)
+			}
+		})
+	}
+}
+
+func TestExecEmptyInput(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	stream, err := runtimeClient(t).Exec(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, frame := range []*runtimev1.ExecClientMessage{
+		{Payload: &runtimev1.ExecClientMessage_Start{Start: &runtimev1.ExecStart{}}},
+		{Payload: &runtimev1.ExecClientMessage_CloseStdin{CloseStdin: &runtimev1.CloseStdin{}}},
+	} {
+		if err := stream.Send(frame); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := stream.CloseSend(); err != nil {
+		t.Fatal(err)
+	}
+	exited := false
+	for {
+		frame, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if frame.GetStdout() != nil {
+			t.Fatal("unexpected stdout for empty stdin")
+		}
+		if frame.GetExit() != nil {
+			exited = true
+		}
+	}
+	if !exited {
+		t.Fatal("empty stdin did not terminate")
+	}
+}

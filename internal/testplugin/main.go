@@ -37,6 +37,9 @@ func (*fixture) Exec(stream grpc.BidiStreamingServer[runtimev1.ExecClientMessage
 		}
 		switch payload := frame.Payload.(type) {
 		case *runtimev1.ExecClientMessage_Stdin:
+			if len(payload.Stdin) == 0 {
+				return status.Error(codes.InvalidArgument, "stdin data frames must be nonempty")
+			}
 			if err := stream.Send(&runtimev1.ExecServerMessage{Payload: &runtimev1.ExecServerMessage_Stdout{Stdout: &runtimev1.OutputChunk{Data: payload.Stdin}}}); err != nil {
 				return err
 			}

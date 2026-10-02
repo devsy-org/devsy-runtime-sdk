@@ -20,9 +20,9 @@ Start on an already running workspace succeeds; missing returns NotFound. Stop o
 
 ## Exec and Logs
 
-The first client frame is exactly one ExecStart containing argv. Later frames contain stdin bytes or exactly one CloseStdin; the client then closes its send side. Data after CloseStdin, repeated Start, empty payloads, and unexpected EOF before CloseStdin are InvalidArgument. v1 Devsy callers use `tty=false`; runtimes reject unsupported TTY requests.
+The first client frame is exactly one ExecStart containing argv. Later frames contain stdin bytes or exactly one CloseStdin; the client then closes its send side. Data after CloseStdin, repeated Start, unset payloads and empty stdin data frames, and unexpected EOF before CloseStdin are InvalidArgument. v1 Devsy callers use `tty=false`; runtimes reject unsupported TTY requests.
 
-Each side uses one send pump and one receive loop. Data chunks should be at most 32 KiB. Stdout/stderr are separate byte streams, with no text decoding or PTY. The receiver drains output before exactly one terminal ExecExit. Ordinary nonzero command exit is carried in ExecExit and the RPC succeeds. Setup/transport/backend failures are RPC errors; stream EOF without an exit is not command success. Context cancellation/deadlines terminate the operation and release its resources. Plugins that launch children must ensure child cleanup; the SDK bootstrap does not implement an OS process-tree manager.
+Each side uses one send pump and one receive loop. Data chunks should be at most 32 KiB. Empty input is represented by CloseStdin with no preceding data frames. Stdout/stderr are separate byte streams, with no text decoding or PTY. The receiver drains output before exactly one terminal ExecExit. Ordinary nonzero command exit is carried in ExecExit and the RPC succeeds. Setup/transport/backend failures are RPC errors; stream EOF without an exit is not command success. Context cancellation/deadlines terminate the operation and release its resources. Plugins that launch children must ensure child cleanup; the SDK bootstrap does not implement an OS process-tree manager.
 
 Logs uses merged binary OutputChunk frames. Output buffering must remain bounded. Do not call Send concurrently from stdout and stderr copiers.
 
