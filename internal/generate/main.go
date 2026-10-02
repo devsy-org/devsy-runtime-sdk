@@ -1,3 +1,4 @@
+// Command generate builds pinned protobuf tools and regenerates Runtime Protocol bindings.
 package main
 
 import (

@@ -21,7 +21,7 @@ id = "go-lint"
 name = "Go lint"
 entry = "mise exec -- golangci-lint run"
 language = "system"
-types = ["go"]
+files = '\.go$|^\.golangci\.yaml$|^go\.(mod|sum)$'
 pass_filenames = false
 
 [[repos.hooks]]
@@ -29,7 +29,7 @@ id = "go-format"
 name = "Go formatting"
 entry = "mise exec -- golangci-lint fmt --diff"
 language = "system"
-types = ["go"]
+files = '\.go$|^\.golangci\.yaml$|^go\.(mod|sum)$'
 pass_filenames = false
 
 [[repos.hooks]]

@@ -65,7 +65,16 @@ func runtimeClient(t *testing.T) runtimev1.RuntimeDriverClient {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return raw.(runtimev1.RuntimeDriverClient)
+	return asRuntimeClient(t, raw)
+}
+
+func asRuntimeClient(t *testing.T, raw any) runtimev1.RuntimeDriverClient {
+	t.Helper()
+	client, ok := raw.(runtimev1.RuntimeDriverClient)
+	if !ok {
+		t.Fatalf("plugin returned %T, want RuntimeDriverClient", raw)
+	}
+	return client
 }
 
 func TestRealPluginInfoAndReap(t *testing.T) {
@@ -80,7 +89,7 @@ func TestRealPluginInfoAndReap(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	info, err := raw.(runtimev1.RuntimeDriverClient).Info(ctx, &runtimev1.InfoRequest{})
+	info, err := asRuntimeClient(t, raw).Info(ctx, &runtimev1.InfoRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}

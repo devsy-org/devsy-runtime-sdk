@@ -36,8 +36,8 @@ jobs:
       - run: buf format --diff --exit-code
       - run: go generate ./...
       - run: git diff --exit-code
-  prek:
-    name: Prek
+  pre-commit:
+    name: Pre-commit
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -46,10 +46,21 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
       - run: prek run --all-files
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+      - run: golangci-lint run
+      - run: golangci-lint fmt --diff
   release-please:
     name: Release Please
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test, generated, prek]
+    needs: [test, generated, pre-commit, lint]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
