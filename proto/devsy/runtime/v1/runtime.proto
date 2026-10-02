@@ -3,31 +3,24 @@ syntax = "proto3";
 
 package devsy.runtime.v1;
 
-option go_package =
-  "github.com/devsy-org/devsy-runtime-sdk/runtimev1;runtimev1";
+option go_package = "github.com/devsy-org/devsy-runtime-sdk/runtimev1;runtimev1";
 
 service RuntimeDriver {
   rpc Info(InfoRequest) returns (InfoResponse);
   rpc Preflight(PreflightRequest) returns (PreflightResponse);
-  rpc ProvisioningPreflight(
-      ProvisioningPreflightRequest
-  ) returns (ProvisioningPreflightResponse);
+  rpc ProvisioningPreflight(ProvisioningPreflightRequest) returns (ProvisioningPreflightResponse);
 
   rpc Find(FindRequest) returns (FindResponse);
-  rpc TargetArchitecture(
-      TargetArchitectureRequest
-  ) returns (TargetArchitectureResponse);
+  rpc TargetArchitecture(TargetArchitectureRequest) returns (TargetArchitectureResponse);
 
   rpc RunImage(RunImageRequest) returns (RunImageResponse);
   rpc Start(StartRequest) returns (StartResponse);
   rpc Stop(StopRequest) returns (StopResponse);
   rpc Delete(DeleteRequest) returns (DeleteResponse);
 
-  rpc Exec(stream ExecClientMessage)
-      returns (stream ExecServerMessage);
+  rpc Exec(stream ExecClientMessage) returns (stream ExecServerMessage);
 
-  rpc Logs(LogsRequest)
-      returns (stream OutputChunk);
+  rpc Logs(LogsRequest) returns (stream OutputChunk);
 }
 
 message InfoRequest {}
@@ -108,7 +101,7 @@ message ContainerState {
 }
 
 message ContainerConfig {
-  map<string,string> labels = 1;
+  map<string, string> labels = 1;
   string working_dir = 2;
   string user = 3;
 }
@@ -137,7 +130,7 @@ message RunImageRequest {
   string entrypoint = 5;
   repeated string args = 6;
 
-  map<string,string> environment = 7;
+  map<string, string> environment = 7;
   repeated string labels = 8;
 
   repeated string cap_add = 9;
@@ -213,7 +206,7 @@ message ExecStart {
   repeated string argv = 2;
   string user = 3;
   string workdir = 4;
-  map<string,string> environment = 5;
+  map<string, string> environment = 5;
   bool tty = 6;
 }
 
@@ -232,7 +225,9 @@ message OutputChunk {
 }
 
 message ExecExit {
+  // Command success requires exit_code == 0 AND an empty signal.
   int32 exit_code = 1;
+  // A nonempty signal means failure regardless of exit_code, whose default is 0.
   string signal = 2;
 }
 
@@ -240,13 +235,12 @@ message LogsRequest {
   string workspace_id = 1;
 }
 
-
 message RuntimeError {
   RuntimeErrorCode code = 1;
   string message = 2;
   string runtime_message = 3;
   bool retryable = 4;
-  map<string,string> details = 5;
+  map<string, string> details = 5;
 }
 
 enum RuntimeErrorCode {
