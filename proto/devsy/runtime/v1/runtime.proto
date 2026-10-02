@@ -1,0 +1,267 @@
+// Runtime Protocol v1. Field numbers are stable once released.
+syntax = "proto3";
+
+package devsy.runtime.v1;
+
+option go_package =
+  "github.com/devsy-org/devsy-runtime-sdk/runtimev1;runtimev1";
+
+service RuntimeDriver {
+  rpc Info(InfoRequest) returns (InfoResponse);
+  rpc Preflight(PreflightRequest) returns (PreflightResponse);
+  rpc ProvisioningPreflight(
+      ProvisioningPreflightRequest
+  ) returns (ProvisioningPreflightResponse);
+
+  rpc Find(FindRequest) returns (FindResponse);
+  rpc TargetArchitecture(
+      TargetArchitectureRequest
+  ) returns (TargetArchitectureResponse);
+
+  rpc RunImage(RunImageRequest) returns (RunImageResponse);
+  rpc Start(StartRequest) returns (StartResponse);
+  rpc Stop(StopRequest) returns (StopResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+
+  rpc Exec(stream ExecClientMessage)
+      returns (stream ExecServerMessage);
+
+  rpc Logs(LogsRequest)
+      returns (stream OutputChunk);
+}
+
+message InfoRequest {}
+
+message InfoResponse {
+  uint32 api_major = 1;
+  uint32 api_minor = 2;
+
+  string driver_name = 3;
+  string driver_version = 4;
+
+  string runtime_name = 5;
+  string runtime_version = 6;
+
+  Capabilities capabilities = 7;
+}
+
+message Capabilities {
+  repeated MountType mount_types = 1;
+
+  bool requires_mount_streaming = 2;
+  bool requires_workspace_chown = 3;
+
+  RecreateMode recreate_mode = 4;
+
+  bool provisioning_preflight = 5;
+  bool reprovision = 6;
+
+  bool logs = 7;
+}
+
+enum MountType {
+  MOUNT_TYPE_UNSPECIFIED = 0;
+  MOUNT_TYPE_BIND = 1;
+  MOUNT_TYPE_VOLUME = 2;
+  MOUNT_TYPE_TMPFS = 3;
+}
+
+enum RecreateMode {
+  RECREATE_MODE_UNSPECIFIED = 0;
+  RECREATE_MODE_DELETE = 1;
+  RECREATE_MODE_STOP = 2;
+}
+
+message PreflightRequest {
+  bool disable_auto_start = 1;
+}
+
+message PreflightResponse {}
+
+message ProvisioningPreflightRequest {}
+
+message ProvisioningPreflightResponse {}
+
+message FindRequest {
+  string workspace_id = 1;
+}
+
+message FindResponse {
+  bool found = 1;
+  ContainerDetails container = 2;
+}
+
+message ContainerDetails {
+  string id = 1;
+  string created_at = 2;
+
+  ContainerState state = 3;
+  ContainerConfig config = 4;
+  repeated ContainerMount mounts = 5;
+}
+
+message ContainerState {
+  string status = 1;
+  string started_at = 2;
+  int32 exit_code = 3;
+  string error = 4;
+}
+
+message ContainerConfig {
+  map<string,string> labels = 1;
+  string working_dir = 2;
+  string user = 3;
+}
+
+message ContainerMount {
+  string type = 1;
+  string source = 2;
+  string destination = 3;
+}
+
+message TargetArchitectureRequest {
+  string workspace_id = 1;
+}
+
+message TargetArchitectureResponse {
+  string architecture = 1;
+}
+
+message RunImageRequest {
+  string workspace_id = 1;
+
+  string image = 2;
+  bool image_built_locally = 3;
+
+  string user = 4;
+  string entrypoint = 5;
+  repeated string args = 6;
+
+  map<string,string> environment = 7;
+  repeated string labels = 8;
+
+  repeated string cap_add = 9;
+  repeated string security_opt = 10;
+
+  optional bool privileged = 11;
+  optional bool init = 12;
+
+  Mount workspace_mount = 13;
+  repeated Mount mounts = 14;
+
+  string userns = 15;
+  repeated string uid_map = 16;
+  repeated string gid_map = 17;
+
+  string platform = 18;
+
+  HostRequirements host_requirements = 19;
+}
+
+message Mount {
+  MountType type = 1;
+  string source = 2;
+  string target = 3;
+  bool read_only = 4;
+  repeated string options = 5;
+}
+
+message HostRequirements {
+  int32 cpus = 1;
+  uint64 memory_bytes = 2;
+  uint64 storage_bytes = 3;
+
+  GpuRequirement gpu = 4;
+}
+
+message GpuRequirement {
+  GpuRequirementValue value = 1;
+}
+
+enum GpuRequirementValue {
+  GPU_UNSPECIFIED = 0;
+  GPU_FALSE = 1;
+  GPU_OPTIONAL = 2;
+  GPU_REQUIRED = 3;
+}
+
+message StartRequest {
+  string workspace_id = 1;
+}
+message StartResponse {}
+
+message StopRequest {
+  string workspace_id = 1;
+}
+message StopResponse {}
+
+message DeleteRequest {
+  string workspace_id = 1;
+}
+message DeleteResponse {}
+
+message ExecClientMessage {
+  oneof payload {
+    ExecStart start = 1;
+    bytes stdin = 2;
+    CloseStdin close_stdin = 3;
+  }
+}
+
+message ExecStart {
+  string workspace_id = 1;
+  repeated string argv = 2;
+  string user = 3;
+  string workdir = 4;
+  map<string,string> environment = 5;
+  bool tty = 6;
+}
+
+message CloseStdin {}
+
+message ExecServerMessage {
+  oneof payload {
+    OutputChunk stdout = 1;
+    OutputChunk stderr = 2;
+    ExecExit exit = 3;
+  }
+}
+
+message OutputChunk {
+  bytes data = 1;
+}
+
+message ExecExit {
+  int32 exit_code = 1;
+  string signal = 2;
+}
+
+message LogsRequest {
+  string workspace_id = 1;
+}
+
+
+message RuntimeError {
+  RuntimeErrorCode code = 1;
+  string message = 2;
+  string runtime_message = 3;
+  bool retryable = 4;
+  map<string,string> details = 5;
+}
+
+enum RuntimeErrorCode {
+  RUNTIME_ERROR_CODE_UNKNOWN = 0;
+  RUNTIME_ERROR_CODE_NOT_FOUND = 1;
+  RUNTIME_ERROR_CODE_ALREADY_EXISTS = 2;
+  RUNTIME_ERROR_CODE_INVALID_ARGUMENT = 3;
+  RUNTIME_ERROR_CODE_UNSUPPORTED = 4;
+  RUNTIME_ERROR_CODE_UNAVAILABLE = 5;
+  RUNTIME_ERROR_CODE_FAILED_PRECONDITION = 6;
+  RUNTIME_ERROR_CODE_PERMISSION_DENIED = 7;
+  RUNTIME_ERROR_CODE_TIMEOUT = 8;
+  RUNTIME_ERROR_CODE_CANCELLED = 9;
+  RUNTIME_ERROR_CODE_RUNTIME_FAILURE = 10;
+  RUNTIME_ERROR_CODE_INCOMPATIBLE_VERSION = 11;
+}
+
+message RunImageResponse {}

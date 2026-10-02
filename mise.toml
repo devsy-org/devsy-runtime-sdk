@@ -1,0 +1,5 @@
+[tools]
+go = "1.26.8"
+protoc = "36.1"
+golangci-lint = "2.13.2"
+prek = "0.5.2"
