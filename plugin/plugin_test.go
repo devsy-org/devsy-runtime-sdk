@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 	if runtime.GOOS == "windows" {
 		executable += ".exe"
 	}
+	// #nosec G204 -- The output path is locally created; the test fixture package is fixed.
 	cmd := exec.Command("go", "build", "-race", "-o", executable, "../internal/testplugin")
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -106,48 +107,34 @@ func TestBinaryExecChannelsAndExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := stream.Send(&runtimev1.ExecClientMessage{Payload: &runtimev1.ExecClientMessage_Start{Start: &runtimev1.ExecStart{Argv: []string{"echo", "argument with spaces"}}}}); err != nil {
+	if err := stream.Send(
+		&runtimev1.ExecClientMessage{
+			Payload: &runtimev1.ExecClientMessage_Start{
+				Start: &runtimev1.ExecStart{Argv: []string{"echo", "argument with spaces"}},
+			},
+		},
+	); err != nil {
 		t.Fatal(err)
 	}
 	payload := bytes.Repeat([]byte{0, 255, '\n', 128}, 8192)
-	if err := stream.Send(&runtimev1.ExecClientMessage{Payload: &runtimev1.ExecClientMessage_Stdin{Stdin: payload}}); err != nil {
+	if err := stream.Send(
+		&runtimev1.ExecClientMessage{Payload: &runtimev1.ExecClientMessage_Stdin{Stdin: payload}},
+	); err != nil {
 		t.Fatal(err)
 	}
-	if err := stream.Send(&runtimev1.ExecClientMessage{Payload: &runtimev1.ExecClientMessage_CloseStdin{CloseStdin: &runtimev1.CloseStdin{}}}); err != nil {
+	if err := stream.Send(
+		&runtimev1.ExecClientMessage{
+			Payload: &runtimev1.ExecClientMessage_CloseStdin{CloseStdin: &runtimev1.CloseStdin{}},
+		},
+	); err != nil {
 		t.Fatal(err)
 	}
 	if err := stream.CloseSend(); err != nil {
 		t.Fatal(err)
 	}
-	var stdout, stderr []byte
-	exited := false
-	for {
-		frame, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		if exited {
-			t.Fatal("output after exit")
-		}
-		switch p := frame.Payload.(type) {
-		case *runtimev1.ExecServerMessage_Stdout:
-			stdout = append(stdout, p.Stdout.Data...)
-		case *runtimev1.ExecServerMessage_Stderr:
-			stderr = append(stderr, p.Stderr.Data...)
-		case *runtimev1.ExecServerMessage_Exit:
-			exited = true
-			if p.Exit.ExitCode != 7 {
-				t.Fatal("exit code lost")
-			}
-		default:
-			t.Fatal("unexpected frame")
-		}
-	}
-	if !bytes.Equal(stdout, payload) || string(stderr) != "diagnostic" || !exited {
-		t.Fatal("binary output, diagnostic channel, or terminal exit lost")
+	result := readExecResult(t, stream)
+	if !bytes.Equal(result.stdout, payload) || string(result.stderr) != "diagnostic" {
+		t.Fatal("binary output or diagnostic channel lost")
 	}
 }
 
@@ -165,7 +152,9 @@ func TestExecCancellation(t *testing.T) {
 }
 
 func TestExecRejectsMalformedFrames(t *testing.T) {
-	start := &runtimev1.ExecClientMessage{Payload: &runtimev1.ExecClientMessage_Start{Start: &runtimev1.ExecStart{}}}
+	start := &runtimev1.ExecClientMessage{
+		Payload: &runtimev1.ExecClientMessage_Start{Start: &runtimev1.ExecStart{}},
+	}
 	cases := []struct {
 		name   string
 		frames []*runtimev1.ExecClientMessage
@@ -173,7 +162,13 @@ func TestExecRejectsMalformedFrames(t *testing.T) {
 		{"missing start", []*runtimev1.ExecClientMessage{{}}},
 		{"second start", []*runtimev1.ExecClientMessage{start, start}},
 		{"unset payload", []*runtimev1.ExecClientMessage{start, {}}},
-		{"empty data frame", []*runtimev1.ExecClientMessage{start, {Payload: &runtimev1.ExecClientMessage_Stdin{Stdin: []byte{}}}}},
+		{
+			"empty data frame",
+			[]*runtimev1.ExecClientMessage{
+				start,
+				{Payload: &runtimev1.ExecClientMessage_Stdin{Stdin: []byte{}}},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -214,7 +209,20 @@ func TestExecEmptyInput(t *testing.T) {
 	if err := stream.CloseSend(); err != nil {
 		t.Fatal(err)
 	}
-	exited := false
+	result := readExecResult(t, stream)
+	if len(result.stdout) != 0 {
+		t.Fatal("unexpected stdout for empty stdin")
+	}
+}
+
+type execResult struct {
+	stdout, stderr []byte
+	exited         bool
+}
+
+func readExecResult(t *testing.T, stream runtimev1.RuntimeDriver_ExecClient) execResult {
+	t.Helper()
+	var result execResult
 	for {
 		frame, err := stream.Recv()
 		if err == io.EOF {
@@ -223,14 +231,30 @@ func TestExecEmptyInput(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if frame.GetStdout() != nil {
-			t.Fatal("unexpected stdout for empty stdin")
-		}
-		if frame.GetExit() != nil {
-			exited = true
-		}
+		result.accept(t, frame)
 	}
-	if !exited {
-		t.Fatal("empty stdin did not terminate")
+	if !result.exited {
+		t.Fatal("terminal exit lost")
+	}
+	return result
+}
+
+func (r *execResult) accept(t *testing.T, frame *runtimev1.ExecServerMessage) {
+	t.Helper()
+	if r.exited {
+		t.Fatal("output after exit")
+	}
+	switch p := frame.Payload.(type) {
+	case *runtimev1.ExecServerMessage_Stdout:
+		r.stdout = append(r.stdout, p.Stdout.Data...)
+	case *runtimev1.ExecServerMessage_Stderr:
+		r.stderr = append(r.stderr, p.Stderr.Data...)
+	case *runtimev1.ExecServerMessage_Exit:
+		r.exited = true
+		if p.Exit.ExitCode != 7 {
+			t.Fatal("exit code lost")
+		}
+	default:
+		t.Fatal("unexpected frame")
 	}
 }

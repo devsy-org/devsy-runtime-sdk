@@ -19,21 +19,39 @@ func ValidateInfo(info *InfoResponse) error {
 		return fmt.Errorf("runtime Info response is missing")
 	}
 	if info.ApiMajor != APIMajor {
-		return fmt.Errorf("runtime %q (%s) API %d.%d is incompatible with host API %d.%d; install a runtime supporting API major %d", info.DriverName, info.DriverVersion, info.ApiMajor, info.ApiMinor, APIMajor, APIMinor, APIMajor)
+		return fmt.Errorf(
+			"runtime %q (%s) API %d.%d is incompatible with host API %d.%d; install a runtime supporting API major %d",
+			info.DriverName,
+			info.DriverVersion,
+			info.ApiMajor,
+			info.ApiMinor,
+			APIMajor,
+			APIMinor,
+			APIMajor,
+		)
 	}
 	if info.DriverName == "" || info.DriverVersion == "" || info.RuntimeName == "" {
 		return fmt.Errorf("runtime Info requires driver name, driver version, and runtime name")
 	}
-	caps := info.Capabilities
+	return validateCapabilities(info.DriverName, info.Capabilities)
+}
+
+func validateCapabilities(driverName string, caps *Capabilities) error {
 	if caps == nil {
 		return fmt.Errorf("runtime Info capabilities are missing")
 	}
-	if caps.RecreateMode != RecreateMode_RECREATE_MODE_DELETE && caps.RecreateMode != RecreateMode_RECREATE_MODE_STOP {
-		return fmt.Errorf("runtime %q has unsupported recreate mode %d", info.DriverName, caps.RecreateMode)
+	if caps.RecreateMode != RecreateMode_RECREATE_MODE_DELETE &&
+		caps.RecreateMode != RecreateMode_RECREATE_MODE_STOP {
+		return fmt.Errorf(
+			"runtime %q has unsupported recreate mode %d",
+			driverName,
+			caps.RecreateMode,
+		)
 	}
 	for _, mount := range caps.MountTypes {
-		if mount != MountType_MOUNT_TYPE_BIND && mount != MountType_MOUNT_TYPE_VOLUME && mount != MountType_MOUNT_TYPE_TMPFS {
-			return fmt.Errorf("runtime %q has unsupported mount type %d", info.DriverName, mount)
+		if mount != MountType_MOUNT_TYPE_BIND && mount != MountType_MOUNT_TYPE_VOLUME &&
+			mount != MountType_MOUNT_TYPE_TMPFS {
+			return fmt.Errorf("runtime %q has unsupported mount type %d", driverName, mount)
 		}
 	}
 	return nil

@@ -20,7 +20,11 @@ const (
 // Handshake returns a fresh configuration; the cookie is an identity check,
 // not authentication or a security boundary.
 func Handshake() hplugin.HandshakeConfig {
-	return hplugin.HandshakeConfig{ProtocolVersion: ProtocolVersion, MagicCookieKey: "DEVSY_RUNTIME_PLUGIN", MagicCookieValue: "devsy-runtime-v1"}
+	return hplugin.HandshakeConfig{
+		ProtocolVersion:  ProtocolVersion,
+		MagicCookieKey:   "DEVSY_RUNTIME_PLUGIN",
+		MagicCookieValue: "devsy-runtime-v1",
+	}
 }
 
 // Runtime bridges one RuntimeDriver implementation to the gRPC-only plugin ABI.
@@ -43,7 +47,11 @@ func (p *Runtime) GRPCServer(_ *hplugin.GRPCBroker, s *grpc.Server) error {
 }
 
 // GRPCClient binds the generated client to the connection owned by go-plugin.
-func (*Runtime) GRPCClient(_ context.Context, _ *hplugin.GRPCBroker, conn *grpc.ClientConn) (any, error) {
+func (*Runtime) GRPCClient(
+	_ context.Context,
+	_ *hplugin.GRPCBroker,
+	conn *grpc.ClientConn,
+) (any, error) {
 	return runtimev1.NewRuntimeDriverClient(conn), nil
 }
 
