@@ -86,6 +86,6 @@ Generation pins protoc and both Go plugins. CI runs independent Pre-commit (prek
 
 ## Releases
 
-Release Please prepares version and changelog PRs from Conventional Commits after main-branch CI passes. Merging a release PR publishes its Go module tag and GitHub release after CI passes again. The initial release is `v0.1.0`; before v1, `fix:` and `feat:` increment the patch version, while breaking changes increment the minor version, matching Devsy providers. SDK module versions are separate from the Runtime Protocol API version.
+Release Please prepares version and changelog PRs from Conventional Commits after main-branch CI passes. The workflow requests automatic squash merging for release PRs, subject to repository branch protection requirements. After a release PR merges and main-branch CI passes again, the workflow publishes its Go module tag and GitHub release. The initial release is `v0.1.0`; before v1, `fix:` and `feat:` increment the patch version, while breaking changes increment the minor version, matching Devsy providers. SDK module versions are separate from the Runtime Protocol API version.
 
 The release job uses the Devsy GitHub App to allow CI to run on release PRs. Repository maintainers must grant the app access to this repository and expose `DEVSY_GITHUB_APP_ID` and `DEVSY_GITHUB_APP_PRIVATE_KEY` as Actions secrets, with contents and pull-request write permissions for the app.
