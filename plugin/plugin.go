@@ -32,7 +32,8 @@ type Runtime struct {
 
 var _ hplugin.GRPCPlugin = (*Runtime)(nil)
 
-// GRPCServer rejects an unset implementation before registering the service.
+// GRPCServer is called once by go-plugin; the serving executable must supply
+// Implementation before registration.
 func (p *Runtime) GRPCServer(_ *hplugin.GRPCBroker, s *grpc.Server) error {
 	if p.Implementation == nil {
 		return errors.New("runtime server implementation is required")
