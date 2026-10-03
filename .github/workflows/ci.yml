@@ -21,7 +21,17 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: '1.26.8'
-      - run: go test -race ./...
+      - name: Run race tests and record process-ownership evidence
+        shell: bash
+        run: |
+          set -o pipefail
+          go test -race -json ./... | tee "$RUNNER_TEMP/test-report.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: runtime-tests-${{ matrix.os }}
+          path: ${{ runner.temp }}/test-report.json
+          if-no-files-found: error
       - run: go vet ./...
   generated:
     name: Generated bindings
