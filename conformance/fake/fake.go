@@ -17,6 +17,7 @@ import (
 // Modes are deterministic failure and streaming scenarios selected at startup.
 const (
 	Normal               = "normal"
+	Conformance          = "conformance"
 	CrashBeforeHandshake = "crash-before-handshake"
 	CrashAfterHandshake  = "crash-after-handshake"
 	DelayHandshake       = "delay-handshake"
@@ -36,6 +37,8 @@ const (
 type Config struct {
 	StateDir string
 	Mode     string
+	// MountTypes defaults to all when nil; an empty slice advertises no mounts.
+	MountTypes []runtimev1.MountType
 }
 
 // Driver implements the protocol without launching a real container or command.
@@ -55,7 +58,7 @@ func New(config Config) (*Driver, error) {
 		config.Mode = Normal
 	}
 	modes := []string{
-		Normal, CrashBeforeHandshake, CrashAfterHandshake, DelayHandshake,
+		Normal, Conformance, CrashBeforeHandshake, CrashAfterHandshake, DelayHandshake,
 		IncompatibleVersion, MalformedInfo, FailPreflight, FailRun, NotFound,
 		ExecEcho, ExecNonzero, ExecCrash, ExecSlow, Logs,
 	}
@@ -64,6 +67,17 @@ func New(config Config) (*Driver, error) {
 	}
 	if err := os.MkdirAll(config.StateDir, 0o700); err != nil {
 		return nil, err
+	}
+	if config.MountTypes == nil {
+		config.MountTypes = []runtimev1.MountType{
+			runtimev1.MountType_MOUNT_TYPE_BIND,
+			runtimev1.MountType_MOUNT_TYPE_VOLUME,
+			runtimev1.MountType_MOUNT_TYPE_TMPFS,
+		}
+	}
+	config.MountTypes = slices.Clone(config.MountTypes)
+	if !validMountTypes(config.MountTypes) {
+		return nil, errors.New("unknown mount capability")
 	}
 	return &Driver{config: config}, nil
 }
@@ -77,10 +91,7 @@ func (d *Driver) Info(context.Context, *runtimev1.InfoRequest) (*runtimev1.InfoR
 		ApiMajor: runtimev1.APIMajor, ApiMinor: runtimev1.APIMinor,
 		DriverName: "fake-runtime", DriverVersion: "1.0.0", RuntimeName: "fake",
 		Capabilities: &runtimev1.Capabilities{
-			MountTypes: []runtimev1.MountType{
-				runtimev1.MountType_MOUNT_TYPE_BIND,
-				runtimev1.MountType_MOUNT_TYPE_VOLUME, runtimev1.MountType_MOUNT_TYPE_TMPFS,
-			},
+			MountTypes:            slices.Clone(d.config.MountTypes),
 			RecreateMode:          runtimev1.RecreateMode_RECREATE_MODE_STOP,
 			ProvisioningPreflight: true, Logs: true,
 		},
@@ -145,4 +156,18 @@ func runtimeError(
 		return status.Error(codes.Internal, "could not encode runtime error")
 	}
 	return st.Err()
+}
+
+func validMountTypes(types []runtimev1.MountType) bool {
+	allowed := []runtimev1.MountType{
+		runtimev1.MountType_MOUNT_TYPE_BIND,
+		runtimev1.MountType_MOUNT_TYPE_VOLUME,
+		runtimev1.MountType_MOUNT_TYPE_TMPFS,
+	}
+	for _, mount := range types {
+		if !slices.Contains(allowed, mount) {
+			return false
+		}
+	}
+	return true
 }

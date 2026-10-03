@@ -19,6 +19,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const (
+	allMounts = "all"
+	testImage = "image"
+)
+
 var executable string
 
 func TestMain(m *testing.M) {
@@ -49,15 +54,38 @@ func launch(t *testing.T, dir, mode string) *hplugin.Client {
 
 func launchWithTimeout(t *testing.T, dir, mode string, timeout time.Duration) *hplugin.Client {
 	t.Helper()
+	return launchProcess(
+		t,
+		launchOptions{directory: dir, mode: mode, timeout: timeout, mounts: allMounts},
+	)
+}
+
+type launchOptions struct {
+	directory string
+	mode      string
+	timeout   time.Duration
+	mounts    string
+}
+
+func launchProcess(t *testing.T, options launchOptions) *hplugin.Client {
+	t.Helper()
 	// #nosec G204 -- Executable is built from the fixed fixture package in TestMain.
 	client := hplugin.NewClient(&hplugin.ClientConfig{
 		HandshakeConfig: sdkplugin.Handshake(),
 		VersionedPlugins: map[int]hplugin.PluginSet{
 			sdkplugin.ProtocolVersion: sdkplugin.ClientPlugins(),
 		},
-		Cmd:              exec.Command(executable, "--state-dir", dir, "--mode", mode),
+		Cmd: exec.Command(
+			executable,
+			"--state-dir",
+			options.directory,
+			"--mode",
+			options.mode,
+			"--mount-types",
+			options.mounts,
+		),
 		AllowedProtocols: []hplugin.Protocol{hplugin.ProtocolGRPC},
-		StartTimeout:     timeout,
+		StartTimeout:     options.timeout,
 	})
 	t.Cleanup(client.Kill)
 	return client
@@ -231,7 +259,7 @@ func TestFailureModes(t *testing.T) {
 		driver := connect(t, launch(t, t.TempDir(), fake.FailRun))
 		_, err := driver.RunImage(
 			testContext(t),
-			&runtimev1.RunImageRequest{WorkspaceId: workspaceID, Image: "image"},
+			&runtimev1.RunImageRequest{WorkspaceId: workspaceID, Image: testImage},
 		)
 		assertRuntimeError(
 			t,

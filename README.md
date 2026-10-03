@@ -19,6 +19,7 @@ Generated protobuf bindings are included. Consumers do not need protoc or the de
 - `runtimev1`: protobuf/gRPC bindings, API versions, and `ValidateInfo` for compatibility checks.
 - `plugin`: shared handshake, plugin name, and gRPC registration/client bridge.
 - `server`: executable serving entry point.
+- `conformance`: reusable protocol behavior suite and structured-error assertions.
 - `conformance/fake`: persistent fake driver for host integration tests.
 
 ## Implementing a runtime
@@ -101,6 +102,7 @@ and echoes stdin; it does not run containers or interpret commands.
 
 | Mode | Behavior |
 | --- | --- |
+| `conformance` | Select a suite scenario through Exec argv; see below |
 | `normal`, `exec-echo` | Full lifecycle, stdin echoed to stdout, exit 0 |
 | `crash-before-handshake` | Exit before serving the plugin |
 | `crash-after-handshake` | Exit on the first Info call |
@@ -115,7 +117,9 @@ and echoes stdin; it does not run containers or interpret commands.
 | `exec-slow` | Block Exec until its context is canceled |
 | `logs` | Normal lifecycle and deterministic binary merged logs |
 
-All modes advertise bind, volume, tmpfs, provisioning preflight, and Logs support.
+By default, all modes advertise bind, volume, tmpfs, provisioning preflight, and
+Logs support. Select mount profiles with `--mount-types all|none|bind|volume|tmpfs`,
+or a comma-separated subset. Unsupported mounts fail before workspace creation.
 Exec and Logs require a running workspace. Start and Stop are idempotent for
 existing resources; Delete is idempotent even for absent resources. Duplicate
 RunImage returns AlreadyExists. Lifecycle failures include RuntimeError details.
@@ -125,3 +129,66 @@ The SDK tests exercise lifecycle state across real plugin restarts, fault modes,
 binary streaming, cancellation, and process cleanup on the CI operating-system
 matrix. These fixture checks are the foundation for the broader driver
 conformance suite, not certification of an external runtime implementation.
+
+## Runtime conformance suite
+
+Runtime authors can call `conformance.Run(t, options)` from a Go test. Supply
+three adapters, all using the runtime's real client transport:
+
+```go
+conformance.Run(t, conformance.Options{
+    Connect:   launchRuntimeClient, // func(*testing.T) runtimev1.RuntimeDriverClient
+    Workspace: workspaceRequest,   // func(*testing.T) *runtimev1.RunImageRequest
+    Command:   scenarioCommand,     // func(conformance.Scenario, string) *runtimev1.ExecStart
+    LogData:   []byte("expected merged logs\n"),
+})
+```
+
+`Connect` must create a fresh client per subtest and register bounded process and
+connection cleanup with `t.Cleanup`. `Workspace` must provide an image and a
+unique workspace ID that is initially absent. Configure the image's entrypoint
+so its finite log output matches `LogData` if the runtime advertises Logs.
+`Command` receives the scenario and workspace ID; return exact argv with
+`tty=false`. The suite does not choose a shell or construct commands for you.
+The default RPC timeout is 30 seconds; set `Timeout` for slower real runtimes.
+
+The suite checks discovery and architecture, lifecycle idempotency, absent
+resources, malformed Exec frames, binary preservation, separate output channels,
+12 MiB of simultaneous stdin/stdout/stderr, consumer backpressure, early exit,
+nonzero and signal exits, cancellation, deadlines, and finite merged Logs.
+Logs and provisioning preflight checks follow the advertised capabilities.
+Streaming comparisons use bounded buffers and require a single terminal exit
+frame after all output. Data frames must be nonempty and follow the SDK's
+recommended 32 KiB bound. Send goroutines are canceled and joined on failure.
+
+Implement these command scenarios in the adapters:
+
+| Scenario | Required behavior |
+| --- | --- |
+| `Echo` | Copy stdin bytes to stdout until CloseStdin; exit 0 |
+| `Arguments` | Print each value from `conformance.ArgumentValues()` verbatim, followed by NUL; exit 0 |
+| `Shell` | Execute a shell command that prints `shell stdout\n`; exit 0 |
+| `Stderr` | Copy stdin bytes to stderr only; exit 0 |
+| `Duplex` | Copy every stdin byte to both stdout and stderr; exit 0 |
+| `Nonzero` | Print `diagnostic` to stderr; exit with a nonzero code and no signal |
+| `Signal` | Report a nonempty exit signal; any exit code is accepted |
+| `EarlyExit` | Exit 0 without reading stdin or producing output |
+| `Block` | Print `ready\n` to stdout, then block until context cancellation; do not exit normally |
+
+For runtime-specific failure injection, call
+`conformance.RequireRuntimeError(t, err, expectedCategory)`. It verifies the
+canonical gRPC status, exactly one typed RuntimeError detail, the expected
+category, and a nonempty user-facing message. The returned detail supports
+additional retryability and diagnostic assertions.
+
+The fake executable's `conformance` mode uses scenario names as argv[0], with
+`conformance.ArgumentValues()` appended for `arguments`. Its shell scenario
+accepts exactly `/bin/sh`, `-c`, `printf 'shell stdout\n'`; the fake simulates
+that output rather than executing a host shell. `error <CATEGORY>` injects a
+structured error, and `crash` emits readiness then exits after one input frame.
+CI runs the full reusable suite against this executable on Linux, macOS, and
+Windows, along with fault, mount-profile, crash/restart, and process-reap tests.
+
+Host launcher trust, startup cancellation, descendant process ownership,
+benchmarking, and Devsy-specific agent delivery are separate host adapter checks;
+this suite does not certify those policies or runtime-specific image semantics.

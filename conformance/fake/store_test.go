@@ -29,7 +29,7 @@ func TestCorruptStateIsAnError(t *testing.T) {
 			}
 			_, err = driver.RunImage(
 				context.Background(),
-				&runtimev1.RunImageRequest{WorkspaceId: workspaceID, Image: "image"},
+				&runtimev1.RunImageRequest{WorkspaceId: workspaceID, Image: testImage},
 			)
 			if err != nil {
 				t.Fatal(err)

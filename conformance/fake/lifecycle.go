@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -62,6 +63,9 @@ func (d *Driver) RunImage(
 			"fake image creation failed",
 			false,
 		)
+	}
+	if err := d.validateMounts(req); err != nil {
+		return nil, err
 	}
 	container, err := d.load(req.GetWorkspaceId())
 	if err != nil {
@@ -198,4 +202,22 @@ func storageError() error {
 		"fake runtime state could not be read or written",
 		false,
 	)
+}
+
+func (d *Driver) validateMounts(req *runtimev1.RunImageRequest) error {
+	mounts := append([]*runtimev1.Mount{}, req.GetMounts()...)
+	if req.GetWorkspaceMount() != nil {
+		mounts = append(mounts, req.GetWorkspaceMount())
+	}
+	for _, mount := range mounts {
+		if !slices.Contains(d.config.MountTypes, mount.GetType()) {
+			return runtimeError(
+				codes.Unimplemented,
+				runtimev1.RuntimeErrorCode_RUNTIME_ERROR_CODE_UNSUPPORTED,
+				"mount type is not supported",
+				false,
+			)
+		}
+	}
+	return nil
 }
