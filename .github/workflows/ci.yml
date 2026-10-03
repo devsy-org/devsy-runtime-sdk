@@ -57,10 +57,40 @@ jobs:
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
       - run: golangci-lint run
       - run: golangci-lint fmt --diff
+  spawn-probe:
+    name: Spawn probe (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.26.8'
+      - name: Measure fresh plugin operations
+        shell: bash
+        run: |
+          probe_dir="$RUNNER_TEMP/runtime probe λ"
+          mkdir -p "$probe_dir/state"
+          go build -o "$probe_dir/runtime.exe" ./cmd/devsy-fake-runtime
+          go build -o "$probe_dir/probe.exe" ./cmd/devsy-runtime-spawn-probe
+          "$probe_dir/probe.exe" --binary "$probe_dir/runtime.exe" \
+            --samples 100 --revision "$GITHUB_SHA" \
+            -- --state-dir "$probe_dir/state" > "$probe_dir/report.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: runtime-spawn-${{ matrix.os }}
+          path: ${{ runner.temp }}/runtime probe λ/report.json
+          if-no-files-found: error
   release-please:
     name: Release Please
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test, generated, pre-commit, lint]
+    needs: [test, generated, pre-commit, lint, spawn-probe]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
