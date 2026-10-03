@@ -7,6 +7,7 @@ import (
 )
 
 // Sample records wall-clock nanoseconds for one complete plugin operation.
+// PID identifies the direct plugin or, in supervised mode, its owning supervisor.
 type Sample struct {
 	PID        int   `json:"pid"`
 	Reaped     bool  `json:"reaped"`
@@ -34,6 +35,8 @@ type Measurements struct {
 
 // Report contains reproducibility metadata, never executable arguments or environment values.
 type Report struct {
+	LaunchMode        string       `json:"launch_mode"`
+	SupervisorSHA256  string       `json:"supervisor_sha256,omitempty"`
 	SchemaVersion     int          `json:"schema_version"`
 	GOOS              string       `json:"goos"`
 	GOARCH            string       `json:"goarch"`
