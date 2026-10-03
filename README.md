@@ -351,7 +351,8 @@ Streaming stress and real-runtime trust/environment compatibility remain
 separate gates before runtime cutover. The streaming probes below cover the
 owned transport; real-runtime compatibility remains outstanding. The
 [Runtime Protocol reference](https://devsy.sh/docs/developing-providers/runtime-protocol)
-records the host environment and executable trust policy.
+records the planned Devsy host environment and executable trust policy;
+external runtime host integration is not implemented yet.
 
 ## Streaming stress under process ownership
 

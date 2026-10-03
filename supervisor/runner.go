@@ -23,6 +23,7 @@ import (
 // Options selects already verified executables. Env overrides the environment
 // selected by go-plugin. Restricting runtime inheritance requires the client
 // to set SkipHostEnv; supplying a few Env entries alone does not restrict it.
+// Client-assigned transport metadata takes precedence over Env overrides.
 type Options struct {
 	SupervisorBinary string
 	SupervisorArgs   []string
