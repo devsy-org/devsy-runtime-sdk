@@ -343,4 +343,35 @@ client-assigned handshake, certificate, and socket metadata retain precedence.
 `Directory` sets the runtime working directory. The additional supervisor start
 must be included in startup measurements before selecting session reuse.
 Streaming stress and real-runtime trust/environment compatibility remain
-separate gates before runtime cutover.
+separate gates before runtime cutover. The streaming probes below cover the
+owned transport; real-runtime compatibility remains outstanding.
+
+## Streaming stress under process ownership
+
+Run the supervisor-backed transport probes with:
+
+```sh
+mise exec -- go test -race -v ./internal/streamprobe
+```
+
+Each duplex run transfers 100 MiB of binary stdin and checks 100 MiB on each
+output channel, followed by distinct binary tails and exactly one nonzero exit.
+Incremental SHA-256 comparisons use fixed-size buffers rather than retaining the
+payload. Separate runs pace the host consumer and plugin reader. Each side has
+one stream sender; an independent control stream releases the paused reader.
+
+Backpressure probes pause either the plugin input reader or the host output
+consumer. They check that the bulk sender cannot finish, record host and plugin
+live Go heap after GC, and enforce a 32 MiB growth budget over the connected
+baseline. These are retained-heap checkpoints, not peak RSS measurements or a
+memory bound for arbitrary runtime implementations. Cancellation must unblock
+and join the sender; a control RPC must still succeed. Additional probes cover
+command early exit and an actual plugin process crash while stdin is active.
+
+The fixture uses the real go-plugin/gRPC transport and the SDK supervisor, with
+runtime executable paths containing spaces and Unicode. CI runs these probes
+under the race detector on Linux, macOS, and Windows; their output is retained
+in the existing `runtime-tests-*` artifacts. The fixture's command outcomes are
+synthetic and do not certify a real runtime's child-process or environment
+behavior. Real-runtime compatibility and supervisor startup measurements remain
+separate integration gates.
