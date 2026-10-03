@@ -340,11 +340,18 @@ their own resource lifecycle rather than depend on these command processes.
 
 The default environment remains inherited, with optional `Env` overrides;
 client-assigned handshake, certificate, and socket metadata retain precedence.
+`Options.Env` only supplies overrides; listing a few variables there does not
+restrict inheritance. A deliberate reduced environment requires go-plugin
+`ClientConfig.SkipHostEnv = true` together with explicit `Options.Env` values.
+This affects the runtime environment, not the trusted supervisor's own inherited
+environment or OS-required variables such as Windows `SYSTEMROOT`.
 `Directory` sets the runtime working directory. The additional supervisor start
 must be included in startup measurements before selecting session reuse.
 Streaming stress and real-runtime trust/environment compatibility remain
 separate gates before runtime cutover. The streaming probes below cover the
-owned transport; real-runtime compatibility remains outstanding.
+owned transport; real-runtime compatibility remains outstanding. The
+[Runtime Protocol reference](https://devsy.sh/docs/developing-providers/runtime-protocol)
+records the host environment and executable trust policy.
 
 ## Streaming stress under process ownership
 
