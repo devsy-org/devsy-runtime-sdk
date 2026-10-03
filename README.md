@@ -192,3 +192,50 @@ Windows, along with fault, mount-profile, crash/restart, and process-reap tests.
 Host launcher trust, startup cancellation, descendant process ownership,
 benchmarking, and Devsy-specific agent delivery are separate host adapter checks;
 this suite does not certify those policies or runtime-specific image semantics.
+
+## Measuring plugin startup
+
+The host adapter's startup spike uses the real plugin transport and includes
+process shutdown and reaping. Build both executables without race instrumentation
+(the race runtime's exit delay would distort process lifetime measurements):
+
+```sh
+mkdir -p bin/probe-state
+go build -o bin/devsy-fake-runtime ./cmd/devsy-fake-runtime
+go build -o bin/devsy-runtime-spawn-probe ./cmd/devsy-runtime-spawn-probe
+"$PWD/bin/devsy-runtime-spawn-probe" \
+  --binary "$PWD/bin/devsy-fake-runtime" --samples 100 \
+  -- --state-dir "$PWD/bin/probe-state" > bin/spawn-report.json
+```
+
+The probe requires an explicitly trusted absolute executable path and an unused
+workspace ID for Find. It inherits the environment for compatibility; it does
+not perform provider download verification or sandbox the executable. Only Info
+and Find are called: the probe does not create, start, stop, or delete resources.
+Forward runtime arguments after `--`. Plugin diagnostics stay on stderr; stdout
+contains only the JSON report. `--timeout` bounds startup and RPCs per repetition;
+Kill/reap is measured separately using go-plugin's cleanup behavior.
+
+Each operation has one first-launch sample and 100 subsequent warm samples.
+Info and Find each launch a fresh process, perform handshake/dial and dispense,
+make one RPC, and kill/reap that process. The startup stage combines process
+launch, handshake, and gRPC dial because go-plugin exposes them as one client
+initialization call. Find measures ordinary absence independently of Info.
+Reports retain raw stage timings in nanoseconds, total p50/p95/p99 using
+nearest-rank percentiles, process IDs and reaping confirmation, OS/architecture,
+Go version, CPU count, source revision, and the measured binary's SHA-256.
+Arguments, full environment values, and executable paths are omitted.
+
+The binary hash identifies the measured artifact; it is not an integrity check
+against a trusted expected checksum. Hashing also warms file caches. First
+launches are therefore not cold-cache measurements, and reports explicitly set
+`cold_cache_measured=false`. Cold-cache experiments require a separately documented
+procedure on hosts where cache disruption is practical. Compare these results
+with an ordinary Devsy up trace before selecting per-operation or Runner-owned
+plugin lifetime; this probe makes no ownership decision or latency threshold.
+
+CI runs the probe on Linux, macOS, and Windows with executable paths containing
+spaces and non-ASCII characters, and publishes `runtime-spawn-*` JSON artifacts.
+These jobs gate release automation alongside the existing quality checks.
+Cross-platform cancellation and descendant-process cleanup are the next host
+hardening gates; successful startup measurements do not certify those behaviors.
