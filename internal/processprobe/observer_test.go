@@ -101,14 +101,7 @@ func (o *observer) read(conn net.Conn) {
 		if err := decoder.Decode(&next); err != nil {
 			return
 		}
-		if next.Kind == "alive" {
-			select {
-			case p.pong <- struct{}{}:
-			case <-o.done:
-			}
-			continue
-		}
-		o.forward(next)
+		o.deliver(p, next)
 	}
 }
 
@@ -250,4 +243,15 @@ func (o *observer) register(role string, p *process) bool {
 		o.processes[role] = p
 		return true
 	}
+}
+
+func (o *observer) deliver(p *process, e event) {
+	if e.Kind == "alive" {
+		select {
+		case p.pong <- struct{}{}:
+		case <-o.done:
+		}
+		return
+	}
+	o.forward(e)
 }
