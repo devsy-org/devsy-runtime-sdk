@@ -19,6 +19,7 @@ Generated protobuf bindings are included. Consumers do not need protoc or the de
 - `runtimev1`: protobuf/gRPC bindings, API versions, and `ValidateInfo` for compatibility checks.
 - `plugin`: shared handshake, plugin name, and gRPC registration/client bridge.
 - `server`: executable serving entry point.
+- `supervisor`: an opt-in go-plugin runner that owns a leased plugin process tree.
 - `conformance`: reusable protocol behavior suite and structured-error assertions.
 - `conformance/fake`: persistent fake driver for host integration tests.
 
@@ -262,13 +263,84 @@ CI runs these probes on Linux, macOS, and Windows with the other race tests;
 | Abrupt plugin death | The runtime child survives until the independent test observer kills it |
 | Abrupt host death | Transport loss cancels the RPC and reaps the child, but the plugin survives until the observer kills it |
 
-The last two tests deliberately record ownership gaps in the current transport.
-A passing probe suite does not mean abrupt process-tree cleanup is implemented.
-`exec.CommandContext` and `Client.Kill()` alone do not establish a complete
-process-tree policy. Windows cannot deliver `os.Interrupt` through
-`os.Process.Signal`, so cancellation exercises the forced-kill fallback there.
 
-These results block runtime cutover until explicit host/plugin/descendant
-ownership is designed and tested on all supported platforms. The fixture is an
-experiment, not an exported process supervisor. Streaming stress and executable
-trust/environment compatibility remain separate host-hardening work.
+The last two baseline tests deliberately retain the plain transport's ownership
+gaps. The owned-runner regressions add a grandchild and disable the fixture's
+response to RPC cancellation. They verify that plugin death, host death, and
+explicit client cleanup terminate all three runtime processes without the test
+observer killing survivors. A handshake-timeout regression also verifies cleanup
+before the runtime becomes ready. The observer remains a fallback only when a
+test fails.
+
+## Owning a runtime process tree
+
+Build the dedicated supervisor helper alongside your runtime binary:
+
+```sh
+go build -o devsy-runtime-supervisor ./cmd/devsy-runtime-supervisor
+```
+
+Configure an SDK client with an explicitly verified absolute path for each
+executable:
+
+```go
+client := hplugin.NewClient(&hplugin.ClientConfig{
+    HandshakeConfig: plugin.Handshake(),
+    VersionedPlugins: map[int]hplugin.PluginSet{
+        plugin.ProtocolVersion: plugin.ClientPlugins(),
+    },
+    AllowedProtocols: []hplugin.Protocol{hplugin.ProtocolGRPC},
+    RunnerFunc: supervisor.Runner(supervisor.Options{
+        SupervisorBinary: verifiedSupervisorPath,
+        RuntimeBinary:    verifiedRuntimePath,
+        Args:             runtimeArgs,
+    }),
+    StartTimeout: 15 * time.Second,
+})
+defer client.Kill()
+```
+
+`hplugin` is `github.com/hashicorp/go-plugin`; `plugin` and `supervisor` are SDK
+packages. Use `RunnerFunc` instead of `Cmd`. The host verifies both executables
+through its existing binary distribution mechanism before configuring this
+runner; go-plugin's `SecureConfig` checks a `Cmd` path and is not applicable to
+this runner. An embedding host can also expose `supervisor.Main(args)` as a
+dedicated helper command in its own executable, selected by `SupervisorArgs`.
+`Main` always exits its process and must only run in that helper process.
+The SDK's module releases do not distribute helper executables automatically.
+
+One supervisor belongs to one go-plugin client. `Client.Kill()` closes the host
+lease and waits for the supervisor to be reaped. Abrupt host death closes the
+same pipe through the OS, so cleanup continues without a live host. Plugin exit
+also triggers cleanup. There is no global process pool or implicit cache.
+Runtime arguments and environment configuration travel to the supervisor through
+an inherited pipe; the supervisor forwards handshake stdout and diagnostics
+stderr without logging the configuration. Buffered diagnostics remain available
+after process reaping, until the reader drains them.
+
+| Platform | Ownership mechanism |
+| --- | --- |
+| Linux | Dedicated plugin process group; supervisor adopts and reaps orphaned descendants as a subreaper |
+| macOS | Dedicated plugin process group; supervisor reaps the plugin and the OS adopts orphaned descendants |
+| Windows | Supervisor joins a non-breakaway Job Object before spawning the plugin; descendants inherit membership, and the last handle closes when the supervisor exits |
+
+Unix observes plugin exit before reaping its group leader, keeping the group ID
+reserved while terminating descendants. Linux uses `waitid` with `WNOWAIT` and
+macOS uses a process-exit kqueue event. Real permission or ownership-setup errors
+remain failures; there is no fallback to unowned launch. The Windows Job Object
+uses [kill-on-close semantics](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects).
+
+This is ownership for trusted runtime commands, not a sandbox. Unix descendants
+must remain in the plugin's process group and retain signalable privileges.
+Daemonization, a new session/process group (including a separately created PTY
+session), or privilege elevation requires an additional explicit owner. On Unix,
+simultaneously killing the host and its supervisor prevents that supervisor from
+performing cleanup. Long-lived runtime services and container resources must have
+their own resource lifecycle rather than depend on these command processes.
+
+The default environment remains inherited, with optional `Env` overrides;
+client-assigned handshake, certificate, and socket metadata retain precedence.
+`Directory` sets the runtime working directory. The additional supervisor start
+must be included in startup measurements before selecting session reuse.
+Streaming stress and real-runtime trust/environment compatibility remain
+separate gates before runtime cutover.
