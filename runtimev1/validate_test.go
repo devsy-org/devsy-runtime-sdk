@@ -10,6 +10,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type infoValidationCase struct {
+	name   string
+	mutate func(*v1.InfoResponse)
+	want   string
+}
+
 func validInfo() *v1.InfoResponse {
 	return &v1.InfoResponse{
 		ApiMajor:      1,
@@ -21,16 +27,33 @@ func validInfo() *v1.InfoResponse {
 }
 
 func TestValidateInfo(t *testing.T) {
-	cases := []struct {
-		name   string
-		mutate func(*v1.InfoResponse)
-		want   string
-	}{
+	cases := []infoValidationCase{
 		{"future minor", func(i *v1.InfoResponse) { i.ApiMinor = 99 }, ""},
 		{
 			"different major",
 			func(i *v1.InfoResponse) { i.ApiMajor = 2 },
 			"install a runtime supporting API major 1",
+		},
+		{
+			"empty driver version",
+			func(i *v1.InfoResponse) { i.DriverVersion = "" },
+			"driver version",
+		},
+		{"empty runtime name", func(i *v1.InfoResponse) { i.RuntimeName = "" }, "runtime name"},
+		{
+			"empty runtime version is allowed",
+			func(i *v1.InfoResponse) { i.RuntimeVersion = "" },
+			"",
+		},
+		{
+			"unspecified recreate",
+			func(i *v1.InfoResponse) { i.Capabilities.RecreateMode = 0 },
+			"recreate mode",
+		},
+		{
+			"unspecified mount",
+			func(i *v1.InfoResponse) { i.Capabilities.MountTypes = []v1.MountType{0} },
+			"mount type",
 		},
 		{"empty name", func(i *v1.InfoResponse) { i.DriverName = "" }, "driver name"},
 		{"missing capabilities", func(i *v1.InfoResponse) { i.Capabilities = nil }, "capabilities"},
@@ -52,6 +75,14 @@ func TestValidateInfo(t *testing.T) {
 			}
 		}, ""},
 	}
+	validateInfoCases(t, cases)
+	if err := v1.ValidateInfo(nil); err == nil {
+		t.Fatal("nil Info accepted")
+	}
+}
+
+func validateInfoCases(t *testing.T, cases []infoValidationCase) {
+	t.Helper()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			info := validInfo()
@@ -65,9 +96,6 @@ func TestValidateInfo(t *testing.T) {
 				t.Fatalf("got %v, want %s", err, tc.want)
 			}
 		})
-	}
-	if err := v1.ValidateInfo(nil); err == nil {
-		t.Fatal("nil Info accepted")
 	}
 }
 

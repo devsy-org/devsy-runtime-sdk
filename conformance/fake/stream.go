@@ -31,6 +31,13 @@ func (d *Driver) Exec(
 	if start.GetTty() {
 		return status.Error(codes.Unimplemented, "fake runtime does not support TTY")
 	}
+	return d.execute(stream, start)
+}
+
+func (d *Driver) execute(stream execStream, start *runtimev1.ExecStart) error {
+	if d.config.Mode == Conformance {
+		return conformanceExec(stream, start)
+	}
 	if d.config.Mode == ExecCrash {
 		os.Exit(24)
 	}
