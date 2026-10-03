@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.0.0...v1.1.0) (2026-10-03)
+
+
+### Features
+
+* measure runtime plugin startup across platforms ([#12](https://github.com/devsy-org/devsy-runtime-sdk/issues/12)) ([c646785](https://github.com/devsy-org/devsy-runtime-sdk/commit/c646785835aab8236ddcdadb7e058bbf09dc75f2))
+
 ## [1.0.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v0.1.0...v1.0.0) (2026-10-03)
 
 
