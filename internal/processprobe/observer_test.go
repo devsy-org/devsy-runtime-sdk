@@ -30,6 +30,7 @@ type observer struct {
 	listener  net.Listener
 	pending   []event
 	events    chan event
+	done      chan struct{}
 	mu        sync.Mutex
 	processes map[string]*process
 }
@@ -53,6 +54,7 @@ func observe(t *testing.T) *observer {
 		directory: directory,
 		listener:  listener,
 		events:    make(chan event, 32),
+		done:      make(chan struct{}),
 		processes: make(map[string]*process),
 	}
 	t.Cleanup(func() { o.cleanup(t) })
@@ -90,20 +92,23 @@ func (o *observer) read(conn net.Conn) {
 		pong:   make(chan struct{}, 1),
 	}
 	defer close(p.closed)
-	o.mu.Lock()
-	o.processes[ready.Role] = p
-	o.mu.Unlock()
-	o.events <- ready
+	if !o.register(ready.Role, p) {
+		return
+	}
+	o.forward(ready)
 	for {
 		var next event
 		if err := decoder.Decode(&next); err != nil {
 			return
 		}
 		if next.Kind == "alive" {
-			p.pong <- struct{}{}
+			select {
+			case p.pong <- struct{}{}:
+			case <-o.done:
+			}
 			continue
 		}
-		o.events <- next
+		o.forward(next)
 	}
 }
 
@@ -181,6 +186,7 @@ func (p *process) kill(t *testing.T) {
 func (o *observer) cleanup(t *testing.T) {
 	t.Helper()
 
+	close(o.done)
 	_ = o.listener.Close()
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -221,4 +227,27 @@ func (o *observer) readyChild(t *testing.T) *process {
 		t.Fatal("child readiness PID mismatch")
 	}
 	return o.lookup(t, "child")
+}
+
+func (o *observer) forward(e event) {
+	// Once teardown starts, stop queueing evidence while still reading until the process disconnects.
+	select {
+	case o.events <- e:
+	case <-o.done:
+	}
+}
+
+func (o *observer) register(role string, p *process) bool {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	select {
+	case <-o.done:
+		// A readiness message may race with teardown; do not leave this late fixture untracked.
+		_ = p.handle.Kill()
+		_ = p.handle.Release()
+		return false
+	default:
+		o.processes[role] = p
+		return true
+	}
 }
