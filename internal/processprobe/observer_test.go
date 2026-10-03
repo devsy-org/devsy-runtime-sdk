@@ -26,6 +26,7 @@ type process struct {
 }
 
 type observer struct {
+	directory string
 	listener  net.Listener
 	pending   []event
 	events    chan event
@@ -35,11 +36,21 @@ type observer struct {
 
 func observe(t *testing.T) *observer {
 	t.Helper()
+	directory, err := os.MkdirTemp("", "dpc-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(directory); err != nil {
+			t.Errorf("remove fixture directory: %v", err)
+		}
+	})
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	o := &observer{
+		directory: directory,
 		listener:  listener,
 		events:    make(chan event, 32),
 		processes: make(map[string]*process),
@@ -169,6 +180,7 @@ func (p *process) kill(t *testing.T) {
 
 func (o *observer) cleanup(t *testing.T) {
 	t.Helper()
+
 	_ = o.listener.Close()
 	o.mu.Lock()
 	defer o.mu.Unlock()

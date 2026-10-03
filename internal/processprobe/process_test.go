@@ -44,8 +44,10 @@ func launch(t *testing.T, o *observer, ignore bool) (*hplugin.Client, *exec.Cmd)
 	// #nosec G204 -- Fixed fixture built by TestMain; no user-controlled executable.
 	cmd := exec.Command(executable, "--mode", "plugin", "--observer", o.listener.Addr().String(),
 		fmt.Sprintf("--ignore-interrupt=%t", ignore))
+	cmd.Env = fixtureEnvironment(o.directory)
 	client := hplugin.NewClient(&hplugin.ClientConfig{
 		HandshakeConfig: sdkplugin.Handshake(),
+		SkipHostEnv:     true,
 		VersionedPlugins: map[int]hplugin.PluginSet{
 			sdkplugin.ProtocolVersion: sdkplugin.ClientPlugins(),
 		},
@@ -183,6 +185,7 @@ func TestHostDeathLeavesPlugin(t *testing.T) {
 		o.listener.Addr().String(),
 		"--ignore-interrupt=true",
 	)
+	cmd.Env = fixtureEnvironment(o.directory)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
@@ -213,4 +216,9 @@ func awaitIgnored(t *testing.T, o *observer, ignore bool) {
 	if ignore && runtime.GOOS != "windows" {
 		o.await(t, "child", "ignored")
 	}
+}
+
+func fixtureEnvironment(directory string) []string {
+	// Keep inherited compatibility, while placing crash-left socket files in a short, test-owned directory.
+	return append(os.Environ(), "TMPDIR="+directory, "TEMP="+directory, "TMP="+directory)
 }
