@@ -239,3 +239,36 @@ spaces and non-ASCII characters, and publishes `runtime-spawn-*` JSON artifacts.
 These jobs gate release automation alongside the existing quality checks.
 Cross-platform cancellation and descendant-process cleanup are the next host
 hardening gates; successful startup measurements do not certify those behaviors.
+
+## Process ownership experiments
+
+Run the real-process cancellation and crash probes with:
+
+```sh
+mise exec -- go test -race -v ./internal/processprobe
+```
+
+The fixture launches a host, a plugin, and a blocking runtime child from an
+executable path containing spaces and Unicode. Readiness acknowledgements
+precede cancellation, and independent observer connections answer liveness
+checks. The plugin acknowledges child reaping only after `exec.Cmd.Wait` returns.
+CI runs these probes on Linux, macOS, and Windows with the other race tests;
+`runtime-tests-*` artifacts retain their JSON test output.
+
+| Scenario | Behavior asserted by the spike |
+| --- | --- |
+| Cancel unary RPC or Exec | A cooperative plugin cancels and reaps its child |
+| Child ignores interruption | A bounded forced-kill fallback reaps the child; Unix also acknowledges the ignored signal |
+| Abrupt plugin death | The runtime child survives until the independent test observer kills it |
+| Abrupt host death | Transport loss cancels the RPC and reaps the child, but the plugin survives until the observer kills it |
+
+The last two tests deliberately record ownership gaps in the current transport.
+A passing probe suite does not mean abrupt process-tree cleanup is implemented.
+`exec.CommandContext` and `Client.Kill()` alone do not establish a complete
+process-tree policy. Windows cannot deliver `os.Interrupt` through
+`os.Process.Signal`, so cancellation exercises the forced-kill fallback there.
+
+These results block runtime cutover until explicit host/plugin/descendant
+ownership is designed and tested on all supported platforms. The fixture is an
+experiment, not an exported process supervisor. Streaming stress and executable
+trust/environment compatibility remain separate host-hardening work.
