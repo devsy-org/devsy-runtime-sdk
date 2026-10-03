@@ -8,13 +8,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	goruntime "runtime"
 	"testing"
 	"time"
 )
 
 type inspection struct {
-	Args           []string
-	Env, Directory string
+	Args      [][]byte
+	Env       []byte
+	Directory string
 }
 
 func TestMain(m *testing.M) {
@@ -28,7 +30,11 @@ func TestMain(m *testing.M) {
 				panic(err)
 			}
 			err = json.NewEncoder(os.Stdout).
-				Encode(inspection{Args: os.Args[2:], Env: os.Getenv("DEVSY_OWNERSHIP_TEST"), Directory: directory})
+				Encode(inspection{
+					Args:      argumentBytes(os.Args[2:]),
+					Env:       []byte(os.Getenv("DEVSY_OWNERSHIP_TEST")),
+					Directory: directory,
+				})
 			if err != nil {
 				panic(err)
 			}
@@ -61,8 +67,8 @@ func fixtureOptions(t *testing.T) Options {
 	}
 	return Options{
 		SupervisorBinary: binary, SupervisorArgs: []string{"--helper-role=supervisor"},
-		RuntimeBinary: binary, Args: []string{"--helper-role=inspect", "space λ argument"},
-		Env: []string{"DEVSY_OWNERSHIP_TEST=inherited override"}, Directory: t.TempDir(),
+		RuntimeBinary: binary, Args: []string{"--helper-role=inspect", argumentValue()},
+		Env: []string{"DEVSY_OWNERSHIP_TEST=" + environmentValue()}, Directory: t.TempDir(),
 	}
 }
 
@@ -144,7 +150,8 @@ func TestPreCanceledStartClosesResources(t *testing.T) {
 
 func assertInspection(t *testing.T, got inspection, directory string) {
 	t.Helper()
-	if len(got.Args) != 1 || got.Args[0] != "space λ argument" || got.Env != "inherited override" {
+	if len(got.Args) != 1 || string(got.Args[0]) != argumentValue() ||
+		!bytes.Equal(got.Env, []byte(environmentValue())) {
 		t.Fatalf("configuration changed: %+v", got)
 	}
 	expected, err := os.Stat(directory)
@@ -166,4 +173,26 @@ func assertDiagnosticTail(t *testing.T, input io.Reader) {
 	if !bytes.Equal(stderr, bytes.Repeat([]byte("diagnostic tail\n"), 64)) {
 		t.Fatal("diagnostic tail lost")
 	}
+}
+
+func argumentBytes(args []string) [][]byte {
+	data := make([][]byte, len(args))
+	for i, arg := range args {
+		data[i] = []byte(arg)
+	}
+	return data
+}
+
+func environmentValue() string {
+	if goruntime.GOOS == "windows" {
+		return "inherited override"
+	}
+	return "inherited override\xff"
+}
+
+func argumentValue() string {
+	if goruntime.GOOS == "windows" {
+		return "space λ argument"
+	}
+	return "space λ argument\xff"
 }

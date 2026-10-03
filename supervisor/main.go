@@ -2,7 +2,7 @@ package supervisor
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/gob"
 	"errors"
 	"flag"
 	"fmt"
@@ -97,7 +97,7 @@ func stopTree(cfg configuration, tree *processTree, exited <-chan error) error {
 
 func readConfiguration(input *os.File) (configuration, error) {
 	var cfg configuration
-	decoder := json.NewDecoder(io.LimitReader(input, 1<<20))
+	decoder := gob.NewDecoder(io.LimitReader(input, 1<<20))
 	if err := decoder.Decode(&cfg); err != nil {
 		return cfg, errors.New("invalid runtime supervisor configuration")
 	}

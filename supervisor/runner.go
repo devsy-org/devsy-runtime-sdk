@@ -3,7 +3,7 @@ package supervisor
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -133,7 +133,7 @@ func (r *ownedRunner) Start(ctx context.Context) error {
 	go func() { r.waitErr = r.cmd.Wait(); r.closeLease(); close(r.done) }()
 	encoded := make(chan error, 1)
 	go func() {
-		encoded <- json.NewEncoder(r.configWrite).Encode(r.config)
+		encoded <- gob.NewEncoder(r.configWrite).Encode(r.config)
 		_ = r.configWrite.Close()
 	}()
 	select {
