@@ -19,34 +19,49 @@ type inspection struct {
 	Directory string
 }
 
+const supervisorFixtureRole = "--helper-role=supervisor"
+
 func TestMain(m *testing.M) {
 	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "--helper-role=supervisor":
-			Main(os.Args[2:])
-		case "--helper-role=inspect":
-			directory, err := os.Getwd()
-			if err != nil {
-				panic(err)
-			}
-			err = json.NewEncoder(os.Stdout).
-				Encode(inspection{
-					Args:      argumentBytes(os.Args[2:]),
-					Env:       []byte(os.Getenv("DEVSY_OWNERSHIP_TEST")),
-					Directory: directory,
-				})
-			if err != nil {
-				panic(err)
-			}
-			if _, err := os.Stderr.Write(
-				bytes.Repeat([]byte("diagnostic tail\n"), 64),
-			); err != nil {
-				panic(err)
-			}
-			os.Exit(0)
-		}
+		runFixtureRole(os.Args[1])
 	}
 	os.Exit(m.Run())
+}
+
+func runFixtureRole(role string) {
+	switch role {
+	case supervisorFixtureRole:
+		Main(os.Args[2:])
+	case "--helper-role=inspect":
+		inspectMain()
+		os.Exit(0)
+	case "--helper-role=environment":
+		serveEnvironment()
+	case "--helper-role=environment-child":
+		environmentChildMain()
+		os.Exit(0)
+	}
+}
+
+func inspectMain() {
+	directory, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	err = json.NewEncoder(os.Stdout).
+		Encode(inspection{
+			Args:      argumentBytes(os.Args[2:]),
+			Env:       []byte(os.Getenv("DEVSY_OWNERSHIP_TEST")),
+			Directory: directory,
+		})
+	if err != nil {
+		panic(err)
+	}
+	if _, err := os.Stderr.Write(
+		bytes.Repeat([]byte("diagnostic tail\n"), 64),
+	); err != nil {
+		panic(err)
+	}
 }
 
 func shortDirectory(t *testing.T) string {
@@ -66,7 +81,7 @@ func fixtureOptions(t *testing.T) Options {
 		t.Fatal(err)
 	}
 	return Options{
-		SupervisorBinary: binary, SupervisorArgs: []string{"--helper-role=supervisor"},
+		SupervisorBinary: binary, SupervisorArgs: []string{supervisorFixtureRole},
 		RuntimeBinary: binary, Args: []string{"--helper-role=inspect", argumentValue()},
 		Env: []string{"DEVSY_OWNERSHIP_TEST=" + environmentValue()}, Directory: t.TempDir(),
 	}
