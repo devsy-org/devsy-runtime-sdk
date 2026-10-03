@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.1.0...v1.2.0) (2026-10-03)
+
+
+### Features
+
+* own runtime process trees with a host-leased supervisor ([#15](https://github.com/devsy-org/devsy-runtime-sdk/issues/15)) ([2df05ac](https://github.com/devsy-org/devsy-runtime-sdk/commit/2df05ac05d9d4cd549765467282a96404cea9189))
+
 ## [1.1.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.0.0...v1.1.0) (2026-10-03)
 
 
