@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v0.1.0...v1.0.0) (2026-10-03)
+
+
+### Features
+
+* add reusable runtime protocol conformance suite ([#11](https://github.com/devsy-org/devsy-runtime-sdk/issues/11)) ([4303521](https://github.com/devsy-org/devsy-runtime-sdk/commit/430352187dbb732fea2b0dce4f6aa2d43abfc7ec))
+* add stateful fake runtime for protocol integration tests ([#9](https://github.com/devsy-org/devsy-runtime-sdk/issues/9)) ([cc8ac81](https://github.com/devsy-org/devsy-runtime-sdk/commit/cc8ac81cf8c69a3f4c339ba39c5a14c3bf6f59e6))
+
 ## 0.1.0 (2026-10-02)
 
 
