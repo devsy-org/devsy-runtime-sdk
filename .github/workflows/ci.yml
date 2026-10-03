@@ -88,14 +88,21 @@ jobs:
           probe_dir="$RUNNER_TEMP/runtime probe λ"
           mkdir -p "$probe_dir/state"
           go build -o "$probe_dir/runtime.exe" ./cmd/devsy-fake-runtime
+          go build -o "$probe_dir/supervisor.exe" ./cmd/devsy-runtime-supervisor
           go build -o "$probe_dir/probe.exe" ./cmd/devsy-runtime-spawn-probe
           "$probe_dir/probe.exe" --binary "$probe_dir/runtime.exe" \
             --samples 100 --revision "$GITHUB_SHA" \
             -- --state-dir "$probe_dir/state" > "$probe_dir/report.json"
+          "$probe_dir/probe.exe" --binary "$probe_dir/runtime.exe" \
+            --supervisor-binary "$probe_dir/supervisor.exe" \
+            --samples 100 --revision "$GITHUB_SHA" \
+            -- --state-dir "$probe_dir/state" > "$probe_dir/supervised-report.json"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: runtime-spawn-${{ matrix.os }}
-          path: ${{ runner.temp }}/runtime probe λ/report.json
+          path: |
+            ${{ runner.temp }}/runtime probe λ/report.json
+            ${{ runner.temp }}/runtime probe λ/supervised-report.json
           if-no-files-found: error
   release-please:
     name: Release Please

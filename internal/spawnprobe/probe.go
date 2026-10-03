@@ -11,23 +11,26 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
 	sdkplugin "github.com/devsy-org/devsy-runtime-sdk/plugin"
 	"github.com/devsy-org/devsy-runtime-sdk/runtimev1"
+	"github.com/devsy-org/devsy-runtime-sdk/supervisor"
 	"github.com/hashicorp/go-hclog"
 	hplugin "github.com/hashicorp/go-plugin"
 )
 
 // Config supplies an explicitly trusted executable and bounded measurement count.
 type Config struct {
-	Binary      string
-	Args        []string
-	Samples     int
-	Timeout     time.Duration
-	WorkspaceID string
-	Revision    string
-	Diagnostics io.Writer
+	SupervisorBinary string
+	Binary           string
+	Args             []string
+	Samples          int
+	Timeout          time.Duration
+	WorkspaceID      string
+	Revision         string
+	Diagnostics      io.Writer
 }
 
 // Run measures one first launch and Samples warm launches for Info and Find.
@@ -54,24 +57,56 @@ func Run(ctx context.Context, config Config) (*Report, error) {
 	return &Report{
 		SchemaVersion: 1, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH,
 		GoVersion: runtime.Version(), CPUs: runtime.NumCPU(), Revision: config.Revision,
-		BinarySHA256: checksum, RecordedAt: time.Now().UTC(), Info: info, Find: find,
+		LaunchMode: launchMode(config), BinarySHA256: checksum.runtime,
+		SupervisorSHA256: checksum.supervisor, RecordedAt: time.Now().UTC(), Info: info, Find: find,
 	}, nil
 }
 
-func validate(config Config) (string, error) {
+type binaryHashes struct {
+	runtime    string
+	supervisor string
+}
+
+func launchMode(config Config) string {
+	if config.SupervisorBinary != "" {
+		return "supervised"
+	}
+	return "direct"
+}
+
+func validate(config Config) (binaryHashes, error) {
 	if !filepath.IsAbs(config.Binary) {
-		return "", errors.New("plugin binary must be an absolute path")
+		return binaryHashes{}, errors.New("plugin binary must be an absolute path")
 	}
 	if config.Samples < 1 || config.Samples > 10000 {
-		return "", errors.New("samples must be between 1 and 10000")
+		return binaryHashes{}, errors.New("samples must be between 1 and 10000")
 	}
 	if config.Timeout <= 0 {
-		return "", errors.New("operation timeout must be positive")
+		return binaryHashes{}, errors.New("operation timeout must be positive")
 	}
 	if config.WorkspaceID == "" {
-		return "", errors.New("workspace ID is required for Find")
+		return binaryHashes{}, errors.New("workspace ID is required for Find")
 	}
-	return checksum(config.Binary)
+	return artifactHashes(config)
+}
+
+func artifactHashes(config Config) (binaryHashes, error) {
+	hashes := binaryHashes{}
+	var err error
+	hashes.runtime, err = checksum(config.Binary)
+	if err != nil {
+		return hashes, err
+	}
+	if config.SupervisorBinary != "" {
+		if !filepath.IsAbs(config.SupervisorBinary) {
+			return hashes, errors.New("supervisor binary must be an absolute path")
+		}
+		hashes.supervisor, err = checksum(config.SupervisorBinary)
+		if err != nil {
+			return hashes, fmt.Errorf("supervisor: %w", err)
+		}
+	}
+	return hashes, nil
 }
 
 func checksum(binary string) (string, error) {
@@ -133,34 +168,15 @@ func measureOne(
 	}
 	ctx, cancel := context.WithTimeout(parent, config.Timeout)
 	defer cancel()
-	// #nosec G204 -- The caller supplies an explicitly trusted absolute executable.
-	command := exec.CommandContext(ctx, config.Binary, config.Args...)
-	client := hplugin.NewClient(&hplugin.ClientConfig{
-		HandshakeConfig: sdkplugin.Handshake(),
-		VersionedPlugins: map[int]hplugin.PluginSet{
-			sdkplugin.ProtocolVersion: sdkplugin.ClientPlugins(),
-		},
-		Cmd:              command,
-		AllowedProtocols: []hplugin.Protocol{hplugin.ProtocolGRPC},
-		StartTimeout:     config.Timeout,
-		Logger:           hclog.NewNullLogger(),
-		Stderr:           config.Diagnostics,
-		SyncStderr:       config.Diagnostics,
-	})
+	client := newClient(ctx, config)
 	started := time.Now()
 	defer func() {
-		reapStarted := time.Now()
-		client.Kill()
-		sample.Reaped = client.Exited()
-		if command.Process != nil {
-			sample.PID = command.Process.Pid
-		}
-		sample.ReapNS = time.Since(reapStarted).Nanoseconds()
-		sample.TotalNS = time.Since(started).Nanoseconds()
-		if resultErr == nil && !sample.Reaped {
-			resultErr = errors.New("plugin was not reaped")
+		cleanupErr := reap(client, &sample, started)
+		if resultErr == nil {
+			resultErr = cleanupErr
 		}
 	}()
+
 	rpc, err := client.Client()
 	sample.StartupNS = time.Since(started).Nanoseconds()
 	if err != nil {
@@ -209,6 +225,48 @@ func call(
 	}
 	if found.GetFound() {
 		return errors.New("find probe requires an absent workspace; choose an unused workspace ID")
+	}
+	return nil
+}
+
+func newClient(ctx context.Context, config Config) *hplugin.Client {
+	clientConfig := &hplugin.ClientConfig{
+		HandshakeConfig: sdkplugin.Handshake(),
+		VersionedPlugins: map[int]hplugin.PluginSet{
+			sdkplugin.ProtocolVersion: sdkplugin.ClientPlugins(),
+		},
+		AllowedProtocols: []hplugin.Protocol{hplugin.ProtocolGRPC},
+		StartTimeout:     config.Timeout,
+		Logger:           hclog.NewNullLogger(),
+		Stderr:           config.Diagnostics,
+		SyncStderr:       config.Diagnostics,
+	}
+	if config.SupervisorBinary == "" {
+		// #nosec G204 -- Explicitly trusted absolute executable, validated before measurement.
+		clientConfig.Cmd = exec.CommandContext(ctx, config.Binary, config.Args...)
+	} else {
+		clientConfig.RunnerFunc = supervisor.Runner(supervisor.Options{
+			SupervisorBinary: config.SupervisorBinary,
+			RuntimeBinary:    config.Binary,
+			Args:             config.Args,
+		})
+	}
+	return hplugin.NewClient(clientConfig)
+}
+
+func reap(client *hplugin.Client, sample *Sample, started time.Time) error {
+	reapStarted := time.Now()
+	pid, pidErr := strconv.Atoi(client.ID())
+	sample.PID = pid
+	client.Kill()
+	sample.Reaped = client.Exited()
+	sample.ReapNS = time.Since(reapStarted).Nanoseconds()
+	sample.TotalNS = time.Since(started).Nanoseconds()
+	if pidErr != nil || sample.PID <= 0 {
+		return errors.New("runner did not report a process ID")
+	}
+	if !sample.Reaped {
+		return errors.New("runner was not reaped")
 	}
 	return nil
 }

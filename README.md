@@ -197,16 +197,21 @@ this suite does not certify those policies or runtime-specific image semantics.
 ## Measuring plugin startup
 
 The host adapter's startup spike uses the real plugin transport and includes
-process shutdown and reaping. Build both executables without race instrumentation
+process shutdown and reaping. Build all three executables without race instrumentation
 (the race runtime's exit delay would distort process lifetime measurements):
 
 ```sh
 mkdir -p bin/probe-state
 go build -o bin/devsy-fake-runtime ./cmd/devsy-fake-runtime
 go build -o bin/devsy-runtime-spawn-probe ./cmd/devsy-runtime-spawn-probe
+go build -o bin/devsy-runtime-supervisor ./cmd/devsy-runtime-supervisor
 "$PWD/bin/devsy-runtime-spawn-probe" \
   --binary "$PWD/bin/devsy-fake-runtime" --samples 100 \
   -- --state-dir "$PWD/bin/probe-state" > bin/spawn-report.json
+"$PWD/bin/devsy-runtime-spawn-probe" \
+  --binary "$PWD/bin/devsy-fake-runtime" \
+  --supervisor-binary "$PWD/bin/devsy-runtime-supervisor" --samples 100 \
+  -- --state-dir "$PWD/bin/probe-state" > bin/supervised-spawn-report.json
 ```
 
 The probe requires an explicitly trusted absolute executable path and an unused
@@ -225,7 +230,12 @@ initialization call. Find measures ordinary absence independently of Info.
 Reports retain raw stage timings in nanoseconds, total p50/p95/p99 using
 nearest-rank percentiles, process IDs and reaping confirmation, OS/architecture,
 Go version, CPU count, source revision, and the measured binary's SHA-256.
-Arguments, full environment values, and executable paths are omitted.
+The additive `launch_mode` field identifies `direct` or `supervised` launches;
+`supervisor_sha256` identifies the helper in supervised reports. In direct mode,
+`pid` identifies the plugin; in supervised mode it identifies the owning helper.
+Startup and total durations in supervised mode include launching both processes,
+and reaping includes waiting for supervisor cleanup. Arguments, full environment
+values, and executable paths are omitted.
 
 The binary hash identifies the measured artifact; it is not an integrity check
 against a trusted expected checksum. Hashing also warms file caches. First
@@ -237,9 +247,13 @@ plugin lifetime; this probe makes no ownership decision or latency threshold.
 
 CI runs the probe on Linux, macOS, and Windows with executable paths containing
 spaces and non-ASCII characters, and publishes `runtime-spawn-*` JSON artifacts.
-These jobs gate release automation alongside the existing quality checks.
-Cross-platform cancellation and descendant-process cleanup are the next host
-hardening gates; successful startup measurements do not certify those behaviors.
+Each artifact retains the direct `report.json` and `supervised-report.json` from
+the same runner, runtime binary, operation, and sample count. Compare Info and
+Find separately. These are sequential warm-cache experiments (direct runs first),
+not randomized trials, cold-cache results, or latency acceptance tests. Repeat in
+both orders on a representative host before drawing a performance conclusion.
+These jobs gate release automation alongside the existing quality checks;
+successful startup measurements alone do not certify descendant-process cleanup.
 
 ## Process ownership experiments
 
