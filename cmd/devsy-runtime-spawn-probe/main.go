@@ -21,6 +21,12 @@ func main() {
 		"",
 		"absolute path to an explicitly trusted plugin executable",
 	)
+	flag.StringVar(
+		&config.SupervisorBinary,
+		"supervisor-binary",
+		"",
+		"absolute path to a trusted supervisor helper; empty measures direct launch",
+	)
 	flag.IntVar(&config.Samples, "samples", 100, "warm repetitions per operation")
 	flag.DurationVar(
 		&config.Timeout,
