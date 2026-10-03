@@ -12,6 +12,7 @@ type reporter struct {
 	mu      sync.Mutex
 	encoder *json.Encoder
 	role    string
+	address string
 }
 
 func (r *reporter) Encode(e event) error {

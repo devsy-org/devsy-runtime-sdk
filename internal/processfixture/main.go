@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 	"time"
@@ -17,8 +16,6 @@ import (
 	sdkplugin "github.com/devsy-org/devsy-runtime-sdk/plugin"
 	"github.com/devsy-org/devsy-runtime-sdk/runtimev1"
 	"github.com/devsy-org/devsy-runtime-sdk/server"
-	"github.com/hashicorp/go-hclog"
-	hplugin "github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
@@ -36,51 +33,84 @@ type event struct {
 
 type fixture struct {
 	runtimev1.UnimplementedRuntimeDriverServer
-	observer string
-	ignore   bool
-	events   *reporter
+	observer     string
+	ignore       bool
+	grandchild   bool
+	uncancelable bool
+	events       *reporter
 }
 
 func main() {
+	if len(os.Args) > 2 && os.Args[1] == "--supervise" {
+		superviseFixture(os.Args[2], os.Args[3:])
+	}
 	mode := flag.String("mode", pluginRole, "fixture role")
 	observer := flag.String("observer", "", "loopback observer address")
 	ignore := flag.Bool("ignore-interrupt", false, "child ignores normal termination")
+	owned := flag.Bool("owned", false, "use SDK process supervisor")
+	grandchild := flag.Bool("grandchild", false, "child starts a blocking grandchild")
+	uncancelable := flag.Bool("uncancelable", false, "runtime ignores RPC cancellation")
+	delayed := flag.Bool("delayed", false, "block before handshake")
 	flag.Parse()
-	if err := run(*mode, *observer, *ignore); err != nil {
+	behavior := behavior{
+		ignore:       *ignore,
+		grandchild:   *grandchild,
+		uncancelable: *uncancelable,
+		delayed:      *delayed,
+		owned:        *owned,
+	}
+	if err := run(*mode, *observer, behavior); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(mode, observer string, ignore bool) error {
+type behavior struct{ ignore, grandchild, uncancelable, delayed, owned bool }
+
+func run(mode, observer string, behavior behavior) error {
 	conn, err := net.DialTimeout("tcp", observer, 5*time.Second)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = conn.Close() }()
-	events := &reporter{encoder: json.NewEncoder(conn), role: mode}
+	events := &reporter{encoder: json.NewEncoder(conn), role: mode, address: observer}
 	if err := events.Encode(event{Role: mode, Kind: "ready", PID: os.Getpid()}); err != nil {
 		return err
 	}
 	disconnected := make(chan struct{})
 	go events.respond(conn, disconnected)
 	switch mode {
-	case childRole:
-		return child(disconnected, events, ignore)
 	case "host":
-		return host(observer, ignore)
+		return host(observer, behavior)
+	case childRole, "grandchild":
+		return child(disconnected, events, behavior)
 	case pluginRole:
-		server.Serve(&fixture{observer: observer, ignore: ignore, events: events})
+		if behavior.delayed {
+			<-disconnected
+			return nil
+		}
+		server.Serve(
+			&fixture{
+				observer:     observer,
+				ignore:       behavior.ignore,
+				grandchild:   behavior.grandchild,
+				uncancelable: behavior.uncancelable,
+				events:       events,
+			},
+		)
 		return nil
 	default:
 		return errors.New("unknown fixture role")
 	}
 }
 
-func child(disconnected <-chan struct{}, events *reporter, ignore bool) error {
+func child(disconnected <-chan struct{}, events *reporter, behavior behavior) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(signals)
+	if err := maybeGrandchild(events, behavior.grandchild); err != nil {
+		return err
+	}
 	// Publish readiness only after the signal handler and observer connection exist.
 	if err := json.NewEncoder(os.Stdout).
 		Encode(event{Role: childRole, Kind: "armed", PID: os.Getpid()}); err != nil {
@@ -91,7 +121,7 @@ func child(disconnected <-chan struct{}, events *reporter, ignore bool) error {
 		case <-disconnected:
 			return nil
 		case <-signals:
-			if !ignore {
+			if !behavior.ignore {
 				return nil
 			}
 			if err := events.Encode(
@@ -127,17 +157,10 @@ func (f *fixture) Exec(
 }
 
 func (f *fixture) block(ctx context.Context) error {
-	executable, err := os.Executable()
+	cmd, err := f.childCommand(ctx)
 	if err != nil {
 		return err
 	}
-	// #nosec G204 -- Self-executable fixture, with arguments controlled by the test harness.
-	cmd := exec.CommandContext(ctx, executable, "--mode", childRole, "--observer", f.observer,
-		fmt.Sprintf("--ignore-interrupt=%t", f.ignore))
-	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
-	// Windows cannot deliver os.Interrupt to a child; WaitDelay also bounds this fallback.
-	cmd.WaitDelay = 100 * time.Millisecond
-	cmd.Stderr = os.Stderr
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -170,26 +193,11 @@ func (f *fixture) block(ctx context.Context) error {
 	return waitErr
 }
 
-func host(observer string, ignore bool) error {
-	executable, err := os.Executable()
+func host(observer string, behavior behavior) error {
+	client, err := hostClient(observer, behavior)
 	if err != nil {
 		return err
 	}
-	// #nosec G204 -- Self-executable fixture, with arguments controlled by the test harness.
-	cmd := exec.Command(executable, "--mode", pluginRole, "--observer", observer,
-		fmt.Sprintf("--ignore-interrupt=%t", ignore))
-	client := hplugin.NewClient(&hplugin.ClientConfig{
-		HandshakeConfig: sdkplugin.Handshake(),
-		VersionedPlugins: map[int]hplugin.PluginSet{
-			sdkplugin.ProtocolVersion: sdkplugin.ClientPlugins(),
-		},
-		AllowedProtocols: []hplugin.Protocol{hplugin.ProtocolGRPC},
-		Cmd:              cmd,
-		StartTimeout:     10 * time.Second,
-		Logger:           hclog.NewNullLogger(),
-		Stderr:           os.Stderr,
-		SyncStderr:       os.Stderr,
-	})
 	defer client.Kill()
 	rpc, err := client.Client()
 	if err != nil {
