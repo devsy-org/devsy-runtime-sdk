@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/devsy-org/devsy-runtime-sdk/internal/spawnprobe"
 )
@@ -24,8 +25,8 @@ func main() {
 	flag.DurationVar(
 		&config.Timeout,
 		"timeout",
-		15_000_000_000,
-		"timeout for each complete operation",
+		15*time.Second,
+		"startup/RPC timeout per repetition; reaping is measured separately",
 	)
 	flag.StringVar(
 		&config.WorkspaceID,
