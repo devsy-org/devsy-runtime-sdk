@@ -47,14 +47,16 @@ func owned(t *testing.T, o *observer, delayed bool) *hplugin.Client {
 				fixtureEnvironment(o.directory),
 				sdkplugin.Handshake().MagicCookieKey+"=stale-cookie",
 				"PLUGIN_PROTOCOL_VERSIONS=99",
+				"PLUGIN_MULTIPLEX_GRPC=false",
 				"PLUGIN_UNIX_SOCKET_DIR="+filepath.Join(o.directory, "stale"),
 			),
 		}),
-		StartTimeout:     timeout,
-		Logger:           hclog.NewNullLogger(),
-		Stderr:           os.Stderr,
-		SyncStderr:       os.Stderr,
-		UnixSocketConfig: &hplugin.UnixSocketConfig{TempDir: o.directory},
+		GRPCBrokerMultiplex: true,
+		StartTimeout:        timeout,
+		Logger:              hclog.NewNullLogger(),
+		Stderr:              os.Stderr,
+		SyncStderr:          os.Stderr,
+		UnixSocketConfig:    &hplugin.UnixSocketConfig{TempDir: o.directory},
 	})
 	t.Cleanup(client.Kill)
 	return client

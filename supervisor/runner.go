@@ -270,6 +270,8 @@ func runtimeEnvironment(base, overrides []string) []string {
 			"PLUGIN_MAX_PORT",
 			"PLUGIN_PROTOCOL_VERSIONS",
 			"PLUGIN_CLIENT_CERT",
+			"PLUGIN_MULTIPLEX_GRPC",
+			"PLUGIN_UNIX_SOCKET_GROUP",
 			"PLUGIN_UNIX_SOCKET_DIR":
 			// Client-assigned transport metadata must survive inherited or provider environment overrides.
 			env = append(env, value)
