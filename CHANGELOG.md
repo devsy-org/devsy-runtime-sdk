@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.2.0...v1.3.0) (2026-10-06)
+
+
+### Features
+
+* **probe:** measure supervisor-owned runtime startup ([#19](https://github.com/devsy-org/devsy-runtime-sdk/issues/19)) ([e9ea5dc](https://github.com/devsy-org/devsy-runtime-sdk/commit/e9ea5dc9bf6012d90afeb1b8e451e07e05e3006f))
+
 ## [1.2.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.1.0...v1.2.0) (2026-10-03)
 
 
