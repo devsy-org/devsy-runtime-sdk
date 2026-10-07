@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.3.0...v1.4.0) (2026-10-07)
+
+
+### Features
+
+* **protocol:** carry workspace developer identity ([#22](https://github.com/devsy-org/devsy-runtime-sdk/issues/22)) ([3963197](https://github.com/devsy-org/devsy-runtime-sdk/commit/396319707b838d3bca2e54fd02ed5cea6f646322))
+
 ## [1.3.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.2.0...v1.3.0) (2026-10-06)
 
 
