@@ -149,6 +149,13 @@ message RunImageRequest {
   string platform = 18;
 
   HostRequirements host_requirements = 19;
+
+  // Developer identity for workspace ownership, distinct from the container user.
+  // When empty, use user if set, otherwise root.
+  string remote_user = 20;
+  // The host will provision the developer environment after starting this image.
+  // Runtimes must not assume the final developer identity exists in the image.
+  bool dockerless = 21;
 }
 
 message Mount {
