@@ -67,6 +67,21 @@ The handshake cookie checks identity; it does not authenticate or sandbox the ex
 
 See the [Runtime Protocol reference](https://devsy.sh/docs/developing-providers/runtime-protocol) for the complete lifecycle, streaming, error, and compatibility contract.
 
+### Workspace identity in API 1.1
+
+`RunImageRequest.remote_user` carries the developer identity used for workspace
+ownership. It is distinct from `user`, which selects the container process user.
+When `remote_user` is empty, use `user` if set, otherwise `root`.
+`dockerless` means the host will provision the developer environment after the
+image starts; the final developer identity may not yet exist in that image.
+Runtimes that resolve mount ownership from image contents must validate this
+case before making changes to workspace resources.
+
+Hosts must forward both values and runtimes must handle them before enabling
+an implementation that depends on workspace ownership. These fields describe
+provisioning intent; they do not authorize resource replacement. Duplicate
+creation and explicit Delete remain separate operations.
+
 ## Development
 
 ```sh

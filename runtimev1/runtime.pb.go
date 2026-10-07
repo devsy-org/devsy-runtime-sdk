@@ -1093,8 +1093,14 @@ type RunImageRequest struct {
 	GidMap            []string               `protobuf:"bytes,17,rep,name=gid_map,json=gidMap,proto3" json:"gid_map,omitempty"`
 	Platform          string                 `protobuf:"bytes,18,opt,name=platform,proto3" json:"platform,omitempty"`
 	HostRequirements  *HostRequirements      `protobuf:"bytes,19,opt,name=host_requirements,json=hostRequirements,proto3" json:"host_requirements,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Developer identity for workspace ownership, distinct from the container user.
+	// When empty, use user if set, otherwise root.
+	RemoteUser string `protobuf:"bytes,20,opt,name=remote_user,json=remoteUser,proto3" json:"remote_user,omitempty"`
+	// The host will provision the developer environment after starting this image.
+	// Runtimes must not assume the final developer identity exists in the image.
+	Dockerless    bool `protobuf:"varint,21,opt,name=dockerless,proto3" json:"dockerless,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RunImageRequest) Reset() {
@@ -1258,6 +1264,20 @@ func (x *RunImageRequest) GetHostRequirements() *HostRequirements {
 		return x.HostRequirements
 	}
 	return nil
+}
+
+func (x *RunImageRequest) GetRemoteUser() string {
+	if x != nil {
+		return x.RemoteUser
+	}
+	return ""
+}
+
+func (x *RunImageRequest) GetDockerless() bool {
+	if x != nil {
+		return x.Dockerless
+	}
+	return false
 }
 
 type Mount struct {
@@ -2320,7 +2340,7 @@ const file_devsy_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x19TargetArchitectureRequest\x12!\n" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\"@\n" +
 	"\x1aTargetArchitectureResponse\x12\"\n" +
-	"\farchitecture\x18\x01 \x01(\tR\farchitecture\"\xac\x06\n" +
+	"\farchitecture\x18\x01 \x01(\tR\farchitecture\"\xed\x06\n" +
 	"\x0fRunImageRequest\x12!\n" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\x12\x14\n" +
 	"\x05image\x18\x02 \x01(\tR\x05image\x12.\n" +
@@ -2345,7 +2365,12 @@ const file_devsy_runtime_v1_runtime_proto_rawDesc = "" +
 	"\auid_map\x18\x10 \x03(\tR\x06uidMap\x12\x17\n" +
 	"\agid_map\x18\x11 \x03(\tR\x06gidMap\x12\x1a\n" +
 	"\bplatform\x18\x12 \x01(\tR\bplatform\x12O\n" +
-	"\x11host_requirements\x18\x13 \x01(\v2\".devsy.runtime.v1.HostRequirementsR\x10hostRequirements\x1a>\n" +
+	"\x11host_requirements\x18\x13 \x01(\v2\".devsy.runtime.v1.HostRequirementsR\x10hostRequirements\x12\x1f\n" +
+	"\vremote_user\x18\x14 \x01(\tR\n" +
+	"remoteUser\x12\x1e\n" +
+	"\n" +
+	"dockerless\x18\x15 \x01(\bR\n" +
+	"dockerless\x1a>\n" +
 	"\x10EnvironmentEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\r\n" +
