@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.5.0...v1.5.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* **ci:** enable auto-merge directly from release outputs ([a95d8c1](https://github.com/devsy-org/devsy-runtime-sdk/commit/a95d8c14a3c0bdeb65c6bfaabe4566c35e1e6349))
+
 ## [1.5.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.4.0...v1.5.0) (2026-10-08)
 
 
