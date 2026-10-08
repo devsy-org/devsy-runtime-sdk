@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.4.0...v1.5.0) (2026-10-08)
+
+
+### Features
+
+* **runtime:** validate workspace reuse without mutation ([482a756](https://github.com/devsy-org/devsy-runtime-sdk/commit/482a756ccec7cec6174e4d87bd51d8852fa71fa8))
+
 ## [1.4.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.3.0...v1.4.0) (2026-10-07)
 
 
