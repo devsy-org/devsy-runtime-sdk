@@ -9,6 +9,9 @@ service RuntimeDriver {
   rpc Info(InfoRequest) returns (InfoResponse);
   rpc Preflight(PreflightRequest) returns (PreflightResponse);
   rpc ProvisioningPreflight(ProvisioningPreflightRequest) returns (ProvisioningPreflightResponse);
+  // Read-only validation before reusing an existing workspace (API 1.2).
+  // FailedPrecondition requires explicit recreation; never mutate the workspace.
+  rpc ReusePreflight(ReusePreflightRequest) returns (ReusePreflightResponse);
 
   rpc Find(FindRequest) returns (FindResponse);
   rpc TargetArchitecture(TargetArchitectureRequest) returns (TargetArchitectureResponse);
@@ -50,6 +53,9 @@ message Capabilities {
   bool reprovision = 6;
 
   bool logs = 7;
+
+  // Validate an existing workspace's creation-time contract without mutation.
+  bool reuse_preflight = 8;
 }
 
 enum MountType {
@@ -74,6 +80,14 @@ message PreflightResponse {}
 message ProvisioningPreflightRequest {}
 
 message ProvisioningPreflightResponse {}
+
+message ReusePreflightRequest {
+  string workspace_id = 1;
+  // Resolved, nonempty developer identity for the requested reuse.
+  string remote_user = 2;
+}
+
+message ReusePreflightResponse {}
 
 message FindRequest {
   string workspace_id = 1;

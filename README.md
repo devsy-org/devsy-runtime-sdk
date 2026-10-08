@@ -82,6 +82,23 @@ an implementation that depends on workspace ownership. These fields describe
 provisioning intent; they do not authorize resource replacement. Duplicate
 creation and explicit Delete remain separate operations.
 
+### Reuse validation in API 1.2
+
+A runtime advertising `capabilities.reuse_preflight` implements `ReusePreflight`.
+Before reusing an existing workspace, the host supplies its workspace ID and
+resolved, nonempty developer identity in `remote_user`. The runtime validates
+its current creation-time contract, including ownership or mount policy, without
+starting, stopping, deleting, or changing the workspace.
+
+An incompatible contract returns structured `FailedPrecondition` with a reason
+and explicit recreation guidance. This failure does not authorize automatic
+replacement. The host propagates it and leaves the workspace intact; explicit
+recreation follows the separate provisioning checks and negotiated recreate mode.
+Missing workspaces return `NotFound`; backend and context failures remain errors.
+Hosts skip this optional RPC when it is not advertised. The conformance suite
+checks successful reuse and cancellation without resource mutation; backend
+suites must cover their own incompatible contracts.
+
 ## Development
 
 ```sh

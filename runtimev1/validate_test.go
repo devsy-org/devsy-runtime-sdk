@@ -29,6 +29,14 @@ func validInfo() *v1.InfoResponse {
 func TestValidateInfo(t *testing.T) {
 	cases := []infoValidationCase{
 		{"future minor", func(i *v1.InfoResponse) { i.ApiMinor = 99 }, ""},
+		{"reuse preflight at API 1.2", func(i *v1.InfoResponse) {
+			i.ApiMinor = 2
+			i.Capabilities.ReusePreflight = true
+		}, ""},
+		{"reuse preflight at older minor", func(i *v1.InfoResponse) {
+			i.ApiMinor = 1
+			i.Capabilities.ReusePreflight = true
+		}, "requires API 1.2"},
 		{
 			"different major",
 			func(i *v1.InfoResponse) { i.ApiMajor = 2 },

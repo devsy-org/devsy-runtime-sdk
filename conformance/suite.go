@@ -61,6 +61,7 @@ func Run(t *testing.T, options Options) {
 	}{
 		{"discovery", discovery},
 		{"lifecycle", lifecycle},
+		{"reuse-preflight", reusePreflight},
 		{"binary-echo", binaryEcho},
 		{"empty-stdin", emptyInput},
 		{"arguments", arguments},

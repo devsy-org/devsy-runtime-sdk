@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	running = "running"
-	stopped = "stopped"
+	running         = "running"
+	stopped         = "stopped"
+	remoteUserLabel = "fake.remote-user"
 )
 
 // Find returns ordinary absence without a gRPC error.
@@ -162,6 +163,7 @@ func newContainer(req *runtimev1.RunImageRequest) *runtimev1.ContainerDetails {
 		key, value, _ := strings.Cut(label, "=")
 		container.Config.Labels[key] = value
 	}
+	container.Config.Labels[remoteUserLabel] = effectiveRemoteUser(req)
 	mounts := append([]*runtimev1.Mount{}, req.GetMounts()...)
 	if req.GetWorkspaceMount() != nil {
 		mounts = append(mounts, req.GetWorkspaceMount())
