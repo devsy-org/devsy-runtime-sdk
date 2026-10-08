@@ -10,7 +10,7 @@ const (
 	// APIMajor changes when the runtime wire contract breaks compatibility.
 	APIMajor uint32 = 1
 	// APIMinor tracks compatible additions within the current major generation.
-	APIMinor uint32 = 1
+	APIMinor uint32 = 2
 	// ChunkSize is the recommended maximum payload for each Exec data frame.
 	ChunkSize = 32 * 1024
 )
@@ -36,6 +36,9 @@ func ValidateInfo(info *InfoResponse) error {
 	}
 	if info.DriverName == "" || info.DriverVersion == "" || info.RuntimeName == "" {
 		return errors.New("runtime Info requires driver name, driver version, and runtime name")
+	}
+	if info.GetCapabilities().GetReusePreflight() && info.ApiMinor < 2 {
+		return errors.New("reuse preflight requires API 1.2 or newer")
 	}
 	return validateCapabilities(info.DriverName, info.Capabilities)
 }

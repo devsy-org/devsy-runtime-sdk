@@ -24,6 +24,7 @@ const (
 	RuntimeDriver_Info_FullMethodName                  = "/devsy.runtime.v1.RuntimeDriver/Info"
 	RuntimeDriver_Preflight_FullMethodName             = "/devsy.runtime.v1.RuntimeDriver/Preflight"
 	RuntimeDriver_ProvisioningPreflight_FullMethodName = "/devsy.runtime.v1.RuntimeDriver/ProvisioningPreflight"
+	RuntimeDriver_ReusePreflight_FullMethodName        = "/devsy.runtime.v1.RuntimeDriver/ReusePreflight"
 	RuntimeDriver_Find_FullMethodName                  = "/devsy.runtime.v1.RuntimeDriver/Find"
 	RuntimeDriver_TargetArchitecture_FullMethodName    = "/devsy.runtime.v1.RuntimeDriver/TargetArchitecture"
 	RuntimeDriver_RunImage_FullMethodName              = "/devsy.runtime.v1.RuntimeDriver/RunImage"
@@ -41,6 +42,9 @@ type RuntimeDriverClient interface {
 	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
 	Preflight(ctx context.Context, in *PreflightRequest, opts ...grpc.CallOption) (*PreflightResponse, error)
 	ProvisioningPreflight(ctx context.Context, in *ProvisioningPreflightRequest, opts ...grpc.CallOption) (*ProvisioningPreflightResponse, error)
+	// Read-only validation before reusing an existing workspace (API 1.2).
+	// FailedPrecondition requires explicit recreation; never mutate the workspace.
+	ReusePreflight(ctx context.Context, in *ReusePreflightRequest, opts ...grpc.CallOption) (*ReusePreflightResponse, error)
 	Find(ctx context.Context, in *FindRequest, opts ...grpc.CallOption) (*FindResponse, error)
 	TargetArchitecture(ctx context.Context, in *TargetArchitectureRequest, opts ...grpc.CallOption) (*TargetArchitectureResponse, error)
 	RunImage(ctx context.Context, in *RunImageRequest, opts ...grpc.CallOption) (*RunImageResponse, error)
@@ -83,6 +87,16 @@ func (c *runtimeDriverClient) ProvisioningPreflight(ctx context.Context, in *Pro
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ProvisioningPreflightResponse)
 	err := c.cc.Invoke(ctx, RuntimeDriver_ProvisioningPreflight_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *runtimeDriverClient) ReusePreflight(ctx context.Context, in *ReusePreflightRequest, opts ...grpc.CallOption) (*ReusePreflightResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReusePreflightResponse)
+	err := c.cc.Invoke(ctx, RuntimeDriver_ReusePreflight_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -188,6 +202,9 @@ type RuntimeDriverServer interface {
 	Info(context.Context, *InfoRequest) (*InfoResponse, error)
 	Preflight(context.Context, *PreflightRequest) (*PreflightResponse, error)
 	ProvisioningPreflight(context.Context, *ProvisioningPreflightRequest) (*ProvisioningPreflightResponse, error)
+	// Read-only validation before reusing an existing workspace (API 1.2).
+	// FailedPrecondition requires explicit recreation; never mutate the workspace.
+	ReusePreflight(context.Context, *ReusePreflightRequest) (*ReusePreflightResponse, error)
 	Find(context.Context, *FindRequest) (*FindResponse, error)
 	TargetArchitecture(context.Context, *TargetArchitectureRequest) (*TargetArchitectureResponse, error)
 	RunImage(context.Context, *RunImageRequest) (*RunImageResponse, error)
@@ -214,6 +231,9 @@ func (UnimplementedRuntimeDriverServer) Preflight(context.Context, *PreflightReq
 }
 func (UnimplementedRuntimeDriverServer) ProvisioningPreflight(context.Context, *ProvisioningPreflightRequest) (*ProvisioningPreflightResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ProvisioningPreflight not implemented")
+}
+func (UnimplementedRuntimeDriverServer) ReusePreflight(context.Context, *ReusePreflightRequest) (*ReusePreflightResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReusePreflight not implemented")
 }
 func (UnimplementedRuntimeDriverServer) Find(context.Context, *FindRequest) (*FindResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Find not implemented")
@@ -310,6 +330,24 @@ func _RuntimeDriver_ProvisioningPreflight_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RuntimeDriverServer).ProvisioningPreflight(ctx, req.(*ProvisioningPreflightRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RuntimeDriver_ReusePreflight_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReusePreflightRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RuntimeDriverServer).ReusePreflight(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RuntimeDriver_ReusePreflight_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RuntimeDriverServer).ReusePreflight(ctx, req.(*ReusePreflightRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -458,6 +496,10 @@ var RuntimeDriver_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ProvisioningPreflight",
 			Handler:    _RuntimeDriver_ProvisioningPreflight_Handler,
+		},
+		{
+			MethodName: "ReusePreflight",
+			Handler:    _RuntimeDriver_ReusePreflight_Handler,
 		},
 		{
 			MethodName: "Find",

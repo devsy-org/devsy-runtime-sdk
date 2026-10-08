@@ -389,8 +389,10 @@ type Capabilities struct {
 	ProvisioningPreflight  bool                   `protobuf:"varint,5,opt,name=provisioning_preflight,json=provisioningPreflight,proto3" json:"provisioning_preflight,omitempty"`
 	Reprovision            bool                   `protobuf:"varint,6,opt,name=reprovision,proto3" json:"reprovision,omitempty"`
 	Logs                   bool                   `protobuf:"varint,7,opt,name=logs,proto3" json:"logs,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Validate an existing workspace's creation-time contract without mutation.
+	ReusePreflight bool `protobuf:"varint,8,opt,name=reuse_preflight,json=reusePreflight,proto3" json:"reuse_preflight,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Capabilities) Reset() {
@@ -468,6 +470,13 @@ func (x *Capabilities) GetReprovision() bool {
 func (x *Capabilities) GetLogs() bool {
 	if x != nil {
 		return x.Logs
+	}
+	return false
+}
+
+func (x *Capabilities) GetReusePreflight() bool {
+	if x != nil {
+		return x.ReusePreflight
 	}
 	return false
 }
@@ -624,6 +633,95 @@ func (*ProvisioningPreflightResponse) Descriptor() ([]byte, []int) {
 	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{6}
 }
 
+type ReusePreflightRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	WorkspaceId string                 `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	// Resolved, nonempty developer identity for the requested reuse.
+	RemoteUser    string `protobuf:"bytes,2,opt,name=remote_user,json=remoteUser,proto3" json:"remote_user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReusePreflightRequest) Reset() {
+	*x = ReusePreflightRequest{}
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReusePreflightRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReusePreflightRequest) ProtoMessage() {}
+
+func (x *ReusePreflightRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReusePreflightRequest.ProtoReflect.Descriptor instead.
+func (*ReusePreflightRequest) Descriptor() ([]byte, []int) {
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ReusePreflightRequest) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *ReusePreflightRequest) GetRemoteUser() string {
+	if x != nil {
+		return x.RemoteUser
+	}
+	return ""
+}
+
+type ReusePreflightResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReusePreflightResponse) Reset() {
+	*x = ReusePreflightResponse{}
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReusePreflightResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReusePreflightResponse) ProtoMessage() {}
+
+func (x *ReusePreflightResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReusePreflightResponse.ProtoReflect.Descriptor instead.
+func (*ReusePreflightResponse) Descriptor() ([]byte, []int) {
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{8}
+}
+
 type FindRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WorkspaceId   string                 `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
@@ -633,7 +731,7 @@ type FindRequest struct {
 
 func (x *FindRequest) Reset() {
 	*x = FindRequest{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[7]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -645,7 +743,7 @@ func (x *FindRequest) String() string {
 func (*FindRequest) ProtoMessage() {}
 
 func (x *FindRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[7]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -658,7 +756,7 @@ func (x *FindRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FindRequest.ProtoReflect.Descriptor instead.
 func (*FindRequest) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{7}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *FindRequest) GetWorkspaceId() string {
@@ -678,7 +776,7 @@ type FindResponse struct {
 
 func (x *FindResponse) Reset() {
 	*x = FindResponse{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[8]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -690,7 +788,7 @@ func (x *FindResponse) String() string {
 func (*FindResponse) ProtoMessage() {}
 
 func (x *FindResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[8]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -703,7 +801,7 @@ func (x *FindResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FindResponse.ProtoReflect.Descriptor instead.
 func (*FindResponse) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{8}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *FindResponse) GetFound() bool {
@@ -733,7 +831,7 @@ type ContainerDetails struct {
 
 func (x *ContainerDetails) Reset() {
 	*x = ContainerDetails{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[9]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -745,7 +843,7 @@ func (x *ContainerDetails) String() string {
 func (*ContainerDetails) ProtoMessage() {}
 
 func (x *ContainerDetails) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[9]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -758,7 +856,7 @@ func (x *ContainerDetails) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContainerDetails.ProtoReflect.Descriptor instead.
 func (*ContainerDetails) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{9}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ContainerDetails) GetId() string {
@@ -808,7 +906,7 @@ type ContainerState struct {
 
 func (x *ContainerState) Reset() {
 	*x = ContainerState{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[10]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -820,7 +918,7 @@ func (x *ContainerState) String() string {
 func (*ContainerState) ProtoMessage() {}
 
 func (x *ContainerState) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[10]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -833,7 +931,7 @@ func (x *ContainerState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContainerState.ProtoReflect.Descriptor instead.
 func (*ContainerState) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{10}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ContainerState) GetStatus() string {
@@ -875,7 +973,7 @@ type ContainerConfig struct {
 
 func (x *ContainerConfig) Reset() {
 	*x = ContainerConfig{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[11]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -887,7 +985,7 @@ func (x *ContainerConfig) String() string {
 func (*ContainerConfig) ProtoMessage() {}
 
 func (x *ContainerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[11]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -900,7 +998,7 @@ func (x *ContainerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContainerConfig.ProtoReflect.Descriptor instead.
 func (*ContainerConfig) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{11}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ContainerConfig) GetLabels() map[string]string {
@@ -935,7 +1033,7 @@ type ContainerMount struct {
 
 func (x *ContainerMount) Reset() {
 	*x = ContainerMount{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[12]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -947,7 +1045,7 @@ func (x *ContainerMount) String() string {
 func (*ContainerMount) ProtoMessage() {}
 
 func (x *ContainerMount) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[12]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -960,7 +1058,7 @@ func (x *ContainerMount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContainerMount.ProtoReflect.Descriptor instead.
 func (*ContainerMount) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{12}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ContainerMount) GetType() string {
@@ -993,7 +1091,7 @@ type TargetArchitectureRequest struct {
 
 func (x *TargetArchitectureRequest) Reset() {
 	*x = TargetArchitectureRequest{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[13]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1005,7 +1103,7 @@ func (x *TargetArchitectureRequest) String() string {
 func (*TargetArchitectureRequest) ProtoMessage() {}
 
 func (x *TargetArchitectureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[13]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1018,7 +1116,7 @@ func (x *TargetArchitectureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TargetArchitectureRequest.ProtoReflect.Descriptor instead.
 func (*TargetArchitectureRequest) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{13}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *TargetArchitectureRequest) GetWorkspaceId() string {
@@ -1037,7 +1135,7 @@ type TargetArchitectureResponse struct {
 
 func (x *TargetArchitectureResponse) Reset() {
 	*x = TargetArchitectureResponse{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[14]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1049,7 +1147,7 @@ func (x *TargetArchitectureResponse) String() string {
 func (*TargetArchitectureResponse) ProtoMessage() {}
 
 func (x *TargetArchitectureResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[14]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1062,7 +1160,7 @@ func (x *TargetArchitectureResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TargetArchitectureResponse.ProtoReflect.Descriptor instead.
 func (*TargetArchitectureResponse) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{14}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *TargetArchitectureResponse) GetArchitecture() string {
@@ -1105,7 +1203,7 @@ type RunImageRequest struct {
 
 func (x *RunImageRequest) Reset() {
 	*x = RunImageRequest{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[15]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1117,7 +1215,7 @@ func (x *RunImageRequest) String() string {
 func (*RunImageRequest) ProtoMessage() {}
 
 func (x *RunImageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[15]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1130,7 +1228,7 @@ func (x *RunImageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunImageRequest.ProtoReflect.Descriptor instead.
 func (*RunImageRequest) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{15}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *RunImageRequest) GetWorkspaceId() string {
@@ -1293,7 +1391,7 @@ type Mount struct {
 
 func (x *Mount) Reset() {
 	*x = Mount{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[16]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1305,7 +1403,7 @@ func (x *Mount) String() string {
 func (*Mount) ProtoMessage() {}
 
 func (x *Mount) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[16]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1318,7 +1416,7 @@ func (x *Mount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Mount.ProtoReflect.Descriptor instead.
 func (*Mount) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{16}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *Mount) GetType() MountType {
@@ -1368,7 +1466,7 @@ type HostRequirements struct {
 
 func (x *HostRequirements) Reset() {
 	*x = HostRequirements{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[17]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1380,7 +1478,7 @@ func (x *HostRequirements) String() string {
 func (*HostRequirements) ProtoMessage() {}
 
 func (x *HostRequirements) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[17]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1393,7 +1491,7 @@ func (x *HostRequirements) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HostRequirements.ProtoReflect.Descriptor instead.
 func (*HostRequirements) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{17}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *HostRequirements) GetCpus() int32 {
@@ -1433,7 +1531,7 @@ type GpuRequirement struct {
 
 func (x *GpuRequirement) Reset() {
 	*x = GpuRequirement{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[18]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1445,7 +1543,7 @@ func (x *GpuRequirement) String() string {
 func (*GpuRequirement) ProtoMessage() {}
 
 func (x *GpuRequirement) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[18]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1458,7 +1556,7 @@ func (x *GpuRequirement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GpuRequirement.ProtoReflect.Descriptor instead.
 func (*GpuRequirement) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{18}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GpuRequirement) GetValue() GpuRequirementValue {
@@ -1477,7 +1575,7 @@ type StartRequest struct {
 
 func (x *StartRequest) Reset() {
 	*x = StartRequest{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[19]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1489,7 +1587,7 @@ func (x *StartRequest) String() string {
 func (*StartRequest) ProtoMessage() {}
 
 func (x *StartRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[19]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1502,7 +1600,7 @@ func (x *StartRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartRequest.ProtoReflect.Descriptor instead.
 func (*StartRequest) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{19}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *StartRequest) GetWorkspaceId() string {
@@ -1520,7 +1618,7 @@ type StartResponse struct {
 
 func (x *StartResponse) Reset() {
 	*x = StartResponse{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[20]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1532,7 +1630,7 @@ func (x *StartResponse) String() string {
 func (*StartResponse) ProtoMessage() {}
 
 func (x *StartResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[20]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1545,7 +1643,7 @@ func (x *StartResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartResponse.ProtoReflect.Descriptor instead.
 func (*StartResponse) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{20}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{22}
 }
 
 type StopRequest struct {
@@ -1557,7 +1655,7 @@ type StopRequest struct {
 
 func (x *StopRequest) Reset() {
 	*x = StopRequest{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[21]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1569,7 +1667,7 @@ func (x *StopRequest) String() string {
 func (*StopRequest) ProtoMessage() {}
 
 func (x *StopRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[21]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1582,7 +1680,7 @@ func (x *StopRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopRequest.ProtoReflect.Descriptor instead.
 func (*StopRequest) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{21}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *StopRequest) GetWorkspaceId() string {
@@ -1600,7 +1698,7 @@ type StopResponse struct {
 
 func (x *StopResponse) Reset() {
 	*x = StopResponse{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[22]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1612,7 +1710,7 @@ func (x *StopResponse) String() string {
 func (*StopResponse) ProtoMessage() {}
 
 func (x *StopResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[22]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1625,7 +1723,7 @@ func (x *StopResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopResponse.ProtoReflect.Descriptor instead.
 func (*StopResponse) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{22}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{24}
 }
 
 type DeleteRequest struct {
@@ -1637,7 +1735,7 @@ type DeleteRequest struct {
 
 func (x *DeleteRequest) Reset() {
 	*x = DeleteRequest{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[23]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1649,7 +1747,7 @@ func (x *DeleteRequest) String() string {
 func (*DeleteRequest) ProtoMessage() {}
 
 func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[23]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1662,7 +1760,7 @@ func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRequest) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{23}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *DeleteRequest) GetWorkspaceId() string {
@@ -1680,7 +1778,7 @@ type DeleteResponse struct {
 
 func (x *DeleteResponse) Reset() {
 	*x = DeleteResponse{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[24]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1692,7 +1790,7 @@ func (x *DeleteResponse) String() string {
 func (*DeleteResponse) ProtoMessage() {}
 
 func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[24]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1705,7 +1803,7 @@ func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{24}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{26}
 }
 
 type ExecClientMessage struct {
@@ -1722,7 +1820,7 @@ type ExecClientMessage struct {
 
 func (x *ExecClientMessage) Reset() {
 	*x = ExecClientMessage{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[25]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1734,7 +1832,7 @@ func (x *ExecClientMessage) String() string {
 func (*ExecClientMessage) ProtoMessage() {}
 
 func (x *ExecClientMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[25]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1747,7 +1845,7 @@ func (x *ExecClientMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecClientMessage.ProtoReflect.Descriptor instead.
 func (*ExecClientMessage) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{25}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ExecClientMessage) GetPayload() isExecClientMessage_Payload {
@@ -1820,7 +1918,7 @@ type ExecStart struct {
 
 func (x *ExecStart) Reset() {
 	*x = ExecStart{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[26]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1832,7 +1930,7 @@ func (x *ExecStart) String() string {
 func (*ExecStart) ProtoMessage() {}
 
 func (x *ExecStart) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[26]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1845,7 +1943,7 @@ func (x *ExecStart) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecStart.ProtoReflect.Descriptor instead.
 func (*ExecStart) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{26}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ExecStart) GetWorkspaceId() string {
@@ -1898,7 +1996,7 @@ type CloseStdin struct {
 
 func (x *CloseStdin) Reset() {
 	*x = CloseStdin{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[27]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1910,7 +2008,7 @@ func (x *CloseStdin) String() string {
 func (*CloseStdin) ProtoMessage() {}
 
 func (x *CloseStdin) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[27]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1923,7 +2021,7 @@ func (x *CloseStdin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseStdin.ProtoReflect.Descriptor instead.
 func (*CloseStdin) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{27}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{29}
 }
 
 type ExecServerMessage struct {
@@ -1940,7 +2038,7 @@ type ExecServerMessage struct {
 
 func (x *ExecServerMessage) Reset() {
 	*x = ExecServerMessage{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[28]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1952,7 +2050,7 @@ func (x *ExecServerMessage) String() string {
 func (*ExecServerMessage) ProtoMessage() {}
 
 func (x *ExecServerMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[28]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1965,7 +2063,7 @@ func (x *ExecServerMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecServerMessage.ProtoReflect.Descriptor instead.
 func (*ExecServerMessage) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{28}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ExecServerMessage) GetPayload() isExecServerMessage_Payload {
@@ -2033,7 +2131,7 @@ type OutputChunk struct {
 
 func (x *OutputChunk) Reset() {
 	*x = OutputChunk{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[29]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2045,7 +2143,7 @@ func (x *OutputChunk) String() string {
 func (*OutputChunk) ProtoMessage() {}
 
 func (x *OutputChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[29]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2058,7 +2156,7 @@ func (x *OutputChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutputChunk.ProtoReflect.Descriptor instead.
 func (*OutputChunk) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{29}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *OutputChunk) GetData() []byte {
@@ -2080,7 +2178,7 @@ type ExecExit struct {
 
 func (x *ExecExit) Reset() {
 	*x = ExecExit{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[30]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2092,7 +2190,7 @@ func (x *ExecExit) String() string {
 func (*ExecExit) ProtoMessage() {}
 
 func (x *ExecExit) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[30]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2105,7 +2203,7 @@ func (x *ExecExit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecExit.ProtoReflect.Descriptor instead.
 func (*ExecExit) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{30}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ExecExit) GetExitCode() int32 {
@@ -2131,7 +2229,7 @@ type LogsRequest struct {
 
 func (x *LogsRequest) Reset() {
 	*x = LogsRequest{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[31]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2143,7 +2241,7 @@ func (x *LogsRequest) String() string {
 func (*LogsRequest) ProtoMessage() {}
 
 func (x *LogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[31]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2156,7 +2254,7 @@ func (x *LogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogsRequest.ProtoReflect.Descriptor instead.
 func (*LogsRequest) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{31}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *LogsRequest) GetWorkspaceId() string {
@@ -2179,7 +2277,7 @@ type RuntimeError struct {
 
 func (x *RuntimeError) Reset() {
 	*x = RuntimeError{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[32]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2191,7 +2289,7 @@ func (x *RuntimeError) String() string {
 func (*RuntimeError) ProtoMessage() {}
 
 func (x *RuntimeError) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[32]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2204,7 +2302,7 @@ func (x *RuntimeError) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeError.ProtoReflect.Descriptor instead.
 func (*RuntimeError) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{32}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *RuntimeError) GetCode() RuntimeErrorCode {
@@ -2250,7 +2348,7 @@ type RunImageResponse struct {
 
 func (x *RunImageResponse) Reset() {
 	*x = RunImageResponse{}
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[33]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2262,7 +2360,7 @@ func (x *RunImageResponse) String() string {
 func (*RunImageResponse) ProtoMessage() {}
 
 func (x *RunImageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[33]
+	mi := &file_devsy_runtime_v1_runtime_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2275,7 +2373,7 @@ func (x *RunImageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunImageResponse.ProtoReflect.Descriptor instead.
 func (*RunImageResponse) Descriptor() ([]byte, []int) {
-	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{33}
+	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{35}
 }
 
 var File_devsy_runtime_v1_runtime_proto protoreflect.FileDescriptor
@@ -2292,7 +2390,7 @@ const file_devsy_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x0edriver_version\x18\x04 \x01(\tR\rdriverVersion\x12!\n" +
 	"\fruntime_name\x18\x05 \x01(\tR\vruntimeName\x12'\n" +
 	"\x0fruntime_version\x18\x06 \x01(\tR\x0eruntimeVersion\x12B\n" +
-	"\fcapabilities\x18\a \x01(\v2\x1e.devsy.runtime.v1.CapabilitiesR\fcapabilities\"\xf2\x02\n" +
+	"\fcapabilities\x18\a \x01(\v2\x1e.devsy.runtime.v1.CapabilitiesR\fcapabilities\"\x9b\x03\n" +
 	"\fCapabilities\x12<\n" +
 	"\vmount_types\x18\x01 \x03(\x0e2\x1b.devsy.runtime.v1.MountTypeR\n" +
 	"mountTypes\x128\n" +
@@ -2301,12 +2399,18 @@ const file_devsy_runtime_v1_runtime_proto_rawDesc = "" +
 	"\rrecreate_mode\x18\x04 \x01(\x0e2\x1e.devsy.runtime.v1.RecreateModeR\frecreateMode\x125\n" +
 	"\x16provisioning_preflight\x18\x05 \x01(\bR\x15provisioningPreflight\x12 \n" +
 	"\vreprovision\x18\x06 \x01(\bR\vreprovision\x12\x12\n" +
-	"\x04logs\x18\a \x01(\bR\x04logs\"@\n" +
+	"\x04logs\x18\a \x01(\bR\x04logs\x12'\n" +
+	"\x0freuse_preflight\x18\b \x01(\bR\x0ereusePreflight\"@\n" +
 	"\x10PreflightRequest\x12,\n" +
 	"\x12disable_auto_start\x18\x01 \x01(\bR\x10disableAutoStart\"\x13\n" +
 	"\x11PreflightResponse\"\x1e\n" +
 	"\x1cProvisioningPreflightRequest\"\x1f\n" +
-	"\x1dProvisioningPreflightResponse\"0\n" +
+	"\x1dProvisioningPreflightResponse\"[\n" +
+	"\x15ReusePreflightRequest\x12!\n" +
+	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\x12\x1f\n" +
+	"\vremote_user\x18\x02 \x01(\tR\n" +
+	"remoteUser\"\x18\n" +
+	"\x16ReusePreflightResponse\"0\n" +
 	"\vFindRequest\x12!\n" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\"f\n" +
 	"\fFindResponse\x12\x14\n" +
@@ -2465,11 +2569,12 @@ const file_devsy_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x1cRUNTIME_ERROR_CODE_CANCELLED\x10\t\x12&\n" +
 	"\"RUNTIME_ERROR_CODE_RUNTIME_FAILURE\x10\n" +
 	"\x12+\n" +
-	"'RUNTIME_ERROR_CODE_INCOMPATIBLE_VERSION\x10\v2\xad\a\n" +
+	"'RUNTIME_ERROR_CODE_INCOMPATIBLE_VERSION\x10\v2\x92\b\n" +
 	"\rRuntimeDriver\x12E\n" +
 	"\x04Info\x12\x1d.devsy.runtime.v1.InfoRequest\x1a\x1e.devsy.runtime.v1.InfoResponse\x12T\n" +
 	"\tPreflight\x12\".devsy.runtime.v1.PreflightRequest\x1a#.devsy.runtime.v1.PreflightResponse\x12x\n" +
-	"\x15ProvisioningPreflight\x12..devsy.runtime.v1.ProvisioningPreflightRequest\x1a/.devsy.runtime.v1.ProvisioningPreflightResponse\x12E\n" +
+	"\x15ProvisioningPreflight\x12..devsy.runtime.v1.ProvisioningPreflightRequest\x1a/.devsy.runtime.v1.ProvisioningPreflightResponse\x12c\n" +
+	"\x0eReusePreflight\x12'.devsy.runtime.v1.ReusePreflightRequest\x1a(.devsy.runtime.v1.ReusePreflightResponse\x12E\n" +
 	"\x04Find\x12\x1d.devsy.runtime.v1.FindRequest\x1a\x1e.devsy.runtime.v1.FindResponse\x12o\n" +
 	"\x12TargetArchitecture\x12+.devsy.runtime.v1.TargetArchitectureRequest\x1a,.devsy.runtime.v1.TargetArchitectureResponse\x12Q\n" +
 	"\bRunImage\x12!.devsy.runtime.v1.RunImageRequest\x1a\".devsy.runtime.v1.RunImageResponse\x12H\n" +
@@ -2492,7 +2597,7 @@ func file_devsy_runtime_v1_runtime_proto_rawDescGZIP() []byte {
 }
 
 var file_devsy_runtime_v1_runtime_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_devsy_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_devsy_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
 var file_devsy_runtime_v1_runtime_proto_goTypes = []any{
 	(MountType)(0),                        // 0: devsy.runtime.v1.MountType
 	(RecreateMode)(0),                     // 1: devsy.runtime.v1.RecreateMode
@@ -2505,86 +2610,90 @@ var file_devsy_runtime_v1_runtime_proto_goTypes = []any{
 	(*PreflightResponse)(nil),             // 8: devsy.runtime.v1.PreflightResponse
 	(*ProvisioningPreflightRequest)(nil),  // 9: devsy.runtime.v1.ProvisioningPreflightRequest
 	(*ProvisioningPreflightResponse)(nil), // 10: devsy.runtime.v1.ProvisioningPreflightResponse
-	(*FindRequest)(nil),                   // 11: devsy.runtime.v1.FindRequest
-	(*FindResponse)(nil),                  // 12: devsy.runtime.v1.FindResponse
-	(*ContainerDetails)(nil),              // 13: devsy.runtime.v1.ContainerDetails
-	(*ContainerState)(nil),                // 14: devsy.runtime.v1.ContainerState
-	(*ContainerConfig)(nil),               // 15: devsy.runtime.v1.ContainerConfig
-	(*ContainerMount)(nil),                // 16: devsy.runtime.v1.ContainerMount
-	(*TargetArchitectureRequest)(nil),     // 17: devsy.runtime.v1.TargetArchitectureRequest
-	(*TargetArchitectureResponse)(nil),    // 18: devsy.runtime.v1.TargetArchitectureResponse
-	(*RunImageRequest)(nil),               // 19: devsy.runtime.v1.RunImageRequest
-	(*Mount)(nil),                         // 20: devsy.runtime.v1.Mount
-	(*HostRequirements)(nil),              // 21: devsy.runtime.v1.HostRequirements
-	(*GpuRequirement)(nil),                // 22: devsy.runtime.v1.GpuRequirement
-	(*StartRequest)(nil),                  // 23: devsy.runtime.v1.StartRequest
-	(*StartResponse)(nil),                 // 24: devsy.runtime.v1.StartResponse
-	(*StopRequest)(nil),                   // 25: devsy.runtime.v1.StopRequest
-	(*StopResponse)(nil),                  // 26: devsy.runtime.v1.StopResponse
-	(*DeleteRequest)(nil),                 // 27: devsy.runtime.v1.DeleteRequest
-	(*DeleteResponse)(nil),                // 28: devsy.runtime.v1.DeleteResponse
-	(*ExecClientMessage)(nil),             // 29: devsy.runtime.v1.ExecClientMessage
-	(*ExecStart)(nil),                     // 30: devsy.runtime.v1.ExecStart
-	(*CloseStdin)(nil),                    // 31: devsy.runtime.v1.CloseStdin
-	(*ExecServerMessage)(nil),             // 32: devsy.runtime.v1.ExecServerMessage
-	(*OutputChunk)(nil),                   // 33: devsy.runtime.v1.OutputChunk
-	(*ExecExit)(nil),                      // 34: devsy.runtime.v1.ExecExit
-	(*LogsRequest)(nil),                   // 35: devsy.runtime.v1.LogsRequest
-	(*RuntimeError)(nil),                  // 36: devsy.runtime.v1.RuntimeError
-	(*RunImageResponse)(nil),              // 37: devsy.runtime.v1.RunImageResponse
-	nil,                                   // 38: devsy.runtime.v1.ContainerConfig.LabelsEntry
-	nil,                                   // 39: devsy.runtime.v1.RunImageRequest.EnvironmentEntry
-	nil,                                   // 40: devsy.runtime.v1.ExecStart.EnvironmentEntry
-	nil,                                   // 41: devsy.runtime.v1.RuntimeError.DetailsEntry
+	(*ReusePreflightRequest)(nil),         // 11: devsy.runtime.v1.ReusePreflightRequest
+	(*ReusePreflightResponse)(nil),        // 12: devsy.runtime.v1.ReusePreflightResponse
+	(*FindRequest)(nil),                   // 13: devsy.runtime.v1.FindRequest
+	(*FindResponse)(nil),                  // 14: devsy.runtime.v1.FindResponse
+	(*ContainerDetails)(nil),              // 15: devsy.runtime.v1.ContainerDetails
+	(*ContainerState)(nil),                // 16: devsy.runtime.v1.ContainerState
+	(*ContainerConfig)(nil),               // 17: devsy.runtime.v1.ContainerConfig
+	(*ContainerMount)(nil),                // 18: devsy.runtime.v1.ContainerMount
+	(*TargetArchitectureRequest)(nil),     // 19: devsy.runtime.v1.TargetArchitectureRequest
+	(*TargetArchitectureResponse)(nil),    // 20: devsy.runtime.v1.TargetArchitectureResponse
+	(*RunImageRequest)(nil),               // 21: devsy.runtime.v1.RunImageRequest
+	(*Mount)(nil),                         // 22: devsy.runtime.v1.Mount
+	(*HostRequirements)(nil),              // 23: devsy.runtime.v1.HostRequirements
+	(*GpuRequirement)(nil),                // 24: devsy.runtime.v1.GpuRequirement
+	(*StartRequest)(nil),                  // 25: devsy.runtime.v1.StartRequest
+	(*StartResponse)(nil),                 // 26: devsy.runtime.v1.StartResponse
+	(*StopRequest)(nil),                   // 27: devsy.runtime.v1.StopRequest
+	(*StopResponse)(nil),                  // 28: devsy.runtime.v1.StopResponse
+	(*DeleteRequest)(nil),                 // 29: devsy.runtime.v1.DeleteRequest
+	(*DeleteResponse)(nil),                // 30: devsy.runtime.v1.DeleteResponse
+	(*ExecClientMessage)(nil),             // 31: devsy.runtime.v1.ExecClientMessage
+	(*ExecStart)(nil),                     // 32: devsy.runtime.v1.ExecStart
+	(*CloseStdin)(nil),                    // 33: devsy.runtime.v1.CloseStdin
+	(*ExecServerMessage)(nil),             // 34: devsy.runtime.v1.ExecServerMessage
+	(*OutputChunk)(nil),                   // 35: devsy.runtime.v1.OutputChunk
+	(*ExecExit)(nil),                      // 36: devsy.runtime.v1.ExecExit
+	(*LogsRequest)(nil),                   // 37: devsy.runtime.v1.LogsRequest
+	(*RuntimeError)(nil),                  // 38: devsy.runtime.v1.RuntimeError
+	(*RunImageResponse)(nil),              // 39: devsy.runtime.v1.RunImageResponse
+	nil,                                   // 40: devsy.runtime.v1.ContainerConfig.LabelsEntry
+	nil,                                   // 41: devsy.runtime.v1.RunImageRequest.EnvironmentEntry
+	nil,                                   // 42: devsy.runtime.v1.ExecStart.EnvironmentEntry
+	nil,                                   // 43: devsy.runtime.v1.RuntimeError.DetailsEntry
 }
 var file_devsy_runtime_v1_runtime_proto_depIdxs = []int32{
 	6,  // 0: devsy.runtime.v1.InfoResponse.capabilities:type_name -> devsy.runtime.v1.Capabilities
 	0,  // 1: devsy.runtime.v1.Capabilities.mount_types:type_name -> devsy.runtime.v1.MountType
 	1,  // 2: devsy.runtime.v1.Capabilities.recreate_mode:type_name -> devsy.runtime.v1.RecreateMode
-	13, // 3: devsy.runtime.v1.FindResponse.container:type_name -> devsy.runtime.v1.ContainerDetails
-	14, // 4: devsy.runtime.v1.ContainerDetails.state:type_name -> devsy.runtime.v1.ContainerState
-	15, // 5: devsy.runtime.v1.ContainerDetails.config:type_name -> devsy.runtime.v1.ContainerConfig
-	16, // 6: devsy.runtime.v1.ContainerDetails.mounts:type_name -> devsy.runtime.v1.ContainerMount
-	38, // 7: devsy.runtime.v1.ContainerConfig.labels:type_name -> devsy.runtime.v1.ContainerConfig.LabelsEntry
-	39, // 8: devsy.runtime.v1.RunImageRequest.environment:type_name -> devsy.runtime.v1.RunImageRequest.EnvironmentEntry
-	20, // 9: devsy.runtime.v1.RunImageRequest.workspace_mount:type_name -> devsy.runtime.v1.Mount
-	20, // 10: devsy.runtime.v1.RunImageRequest.mounts:type_name -> devsy.runtime.v1.Mount
-	21, // 11: devsy.runtime.v1.RunImageRequest.host_requirements:type_name -> devsy.runtime.v1.HostRequirements
+	15, // 3: devsy.runtime.v1.FindResponse.container:type_name -> devsy.runtime.v1.ContainerDetails
+	16, // 4: devsy.runtime.v1.ContainerDetails.state:type_name -> devsy.runtime.v1.ContainerState
+	17, // 5: devsy.runtime.v1.ContainerDetails.config:type_name -> devsy.runtime.v1.ContainerConfig
+	18, // 6: devsy.runtime.v1.ContainerDetails.mounts:type_name -> devsy.runtime.v1.ContainerMount
+	40, // 7: devsy.runtime.v1.ContainerConfig.labels:type_name -> devsy.runtime.v1.ContainerConfig.LabelsEntry
+	41, // 8: devsy.runtime.v1.RunImageRequest.environment:type_name -> devsy.runtime.v1.RunImageRequest.EnvironmentEntry
+	22, // 9: devsy.runtime.v1.RunImageRequest.workspace_mount:type_name -> devsy.runtime.v1.Mount
+	22, // 10: devsy.runtime.v1.RunImageRequest.mounts:type_name -> devsy.runtime.v1.Mount
+	23, // 11: devsy.runtime.v1.RunImageRequest.host_requirements:type_name -> devsy.runtime.v1.HostRequirements
 	0,  // 12: devsy.runtime.v1.Mount.type:type_name -> devsy.runtime.v1.MountType
-	22, // 13: devsy.runtime.v1.HostRequirements.gpu:type_name -> devsy.runtime.v1.GpuRequirement
+	24, // 13: devsy.runtime.v1.HostRequirements.gpu:type_name -> devsy.runtime.v1.GpuRequirement
 	2,  // 14: devsy.runtime.v1.GpuRequirement.value:type_name -> devsy.runtime.v1.GpuRequirementValue
-	30, // 15: devsy.runtime.v1.ExecClientMessage.start:type_name -> devsy.runtime.v1.ExecStart
-	31, // 16: devsy.runtime.v1.ExecClientMessage.close_stdin:type_name -> devsy.runtime.v1.CloseStdin
-	40, // 17: devsy.runtime.v1.ExecStart.environment:type_name -> devsy.runtime.v1.ExecStart.EnvironmentEntry
-	33, // 18: devsy.runtime.v1.ExecServerMessage.stdout:type_name -> devsy.runtime.v1.OutputChunk
-	33, // 19: devsy.runtime.v1.ExecServerMessage.stderr:type_name -> devsy.runtime.v1.OutputChunk
-	34, // 20: devsy.runtime.v1.ExecServerMessage.exit:type_name -> devsy.runtime.v1.ExecExit
+	32, // 15: devsy.runtime.v1.ExecClientMessage.start:type_name -> devsy.runtime.v1.ExecStart
+	33, // 16: devsy.runtime.v1.ExecClientMessage.close_stdin:type_name -> devsy.runtime.v1.CloseStdin
+	42, // 17: devsy.runtime.v1.ExecStart.environment:type_name -> devsy.runtime.v1.ExecStart.EnvironmentEntry
+	35, // 18: devsy.runtime.v1.ExecServerMessage.stdout:type_name -> devsy.runtime.v1.OutputChunk
+	35, // 19: devsy.runtime.v1.ExecServerMessage.stderr:type_name -> devsy.runtime.v1.OutputChunk
+	36, // 20: devsy.runtime.v1.ExecServerMessage.exit:type_name -> devsy.runtime.v1.ExecExit
 	3,  // 21: devsy.runtime.v1.RuntimeError.code:type_name -> devsy.runtime.v1.RuntimeErrorCode
-	41, // 22: devsy.runtime.v1.RuntimeError.details:type_name -> devsy.runtime.v1.RuntimeError.DetailsEntry
+	43, // 22: devsy.runtime.v1.RuntimeError.details:type_name -> devsy.runtime.v1.RuntimeError.DetailsEntry
 	4,  // 23: devsy.runtime.v1.RuntimeDriver.Info:input_type -> devsy.runtime.v1.InfoRequest
 	7,  // 24: devsy.runtime.v1.RuntimeDriver.Preflight:input_type -> devsy.runtime.v1.PreflightRequest
 	9,  // 25: devsy.runtime.v1.RuntimeDriver.ProvisioningPreflight:input_type -> devsy.runtime.v1.ProvisioningPreflightRequest
-	11, // 26: devsy.runtime.v1.RuntimeDriver.Find:input_type -> devsy.runtime.v1.FindRequest
-	17, // 27: devsy.runtime.v1.RuntimeDriver.TargetArchitecture:input_type -> devsy.runtime.v1.TargetArchitectureRequest
-	19, // 28: devsy.runtime.v1.RuntimeDriver.RunImage:input_type -> devsy.runtime.v1.RunImageRequest
-	23, // 29: devsy.runtime.v1.RuntimeDriver.Start:input_type -> devsy.runtime.v1.StartRequest
-	25, // 30: devsy.runtime.v1.RuntimeDriver.Stop:input_type -> devsy.runtime.v1.StopRequest
-	27, // 31: devsy.runtime.v1.RuntimeDriver.Delete:input_type -> devsy.runtime.v1.DeleteRequest
-	29, // 32: devsy.runtime.v1.RuntimeDriver.Exec:input_type -> devsy.runtime.v1.ExecClientMessage
-	35, // 33: devsy.runtime.v1.RuntimeDriver.Logs:input_type -> devsy.runtime.v1.LogsRequest
-	5,  // 34: devsy.runtime.v1.RuntimeDriver.Info:output_type -> devsy.runtime.v1.InfoResponse
-	8,  // 35: devsy.runtime.v1.RuntimeDriver.Preflight:output_type -> devsy.runtime.v1.PreflightResponse
-	10, // 36: devsy.runtime.v1.RuntimeDriver.ProvisioningPreflight:output_type -> devsy.runtime.v1.ProvisioningPreflightResponse
-	12, // 37: devsy.runtime.v1.RuntimeDriver.Find:output_type -> devsy.runtime.v1.FindResponse
-	18, // 38: devsy.runtime.v1.RuntimeDriver.TargetArchitecture:output_type -> devsy.runtime.v1.TargetArchitectureResponse
-	37, // 39: devsy.runtime.v1.RuntimeDriver.RunImage:output_type -> devsy.runtime.v1.RunImageResponse
-	24, // 40: devsy.runtime.v1.RuntimeDriver.Start:output_type -> devsy.runtime.v1.StartResponse
-	26, // 41: devsy.runtime.v1.RuntimeDriver.Stop:output_type -> devsy.runtime.v1.StopResponse
-	28, // 42: devsy.runtime.v1.RuntimeDriver.Delete:output_type -> devsy.runtime.v1.DeleteResponse
-	32, // 43: devsy.runtime.v1.RuntimeDriver.Exec:output_type -> devsy.runtime.v1.ExecServerMessage
-	33, // 44: devsy.runtime.v1.RuntimeDriver.Logs:output_type -> devsy.runtime.v1.OutputChunk
-	34, // [34:45] is the sub-list for method output_type
-	23, // [23:34] is the sub-list for method input_type
+	11, // 26: devsy.runtime.v1.RuntimeDriver.ReusePreflight:input_type -> devsy.runtime.v1.ReusePreflightRequest
+	13, // 27: devsy.runtime.v1.RuntimeDriver.Find:input_type -> devsy.runtime.v1.FindRequest
+	19, // 28: devsy.runtime.v1.RuntimeDriver.TargetArchitecture:input_type -> devsy.runtime.v1.TargetArchitectureRequest
+	21, // 29: devsy.runtime.v1.RuntimeDriver.RunImage:input_type -> devsy.runtime.v1.RunImageRequest
+	25, // 30: devsy.runtime.v1.RuntimeDriver.Start:input_type -> devsy.runtime.v1.StartRequest
+	27, // 31: devsy.runtime.v1.RuntimeDriver.Stop:input_type -> devsy.runtime.v1.StopRequest
+	29, // 32: devsy.runtime.v1.RuntimeDriver.Delete:input_type -> devsy.runtime.v1.DeleteRequest
+	31, // 33: devsy.runtime.v1.RuntimeDriver.Exec:input_type -> devsy.runtime.v1.ExecClientMessage
+	37, // 34: devsy.runtime.v1.RuntimeDriver.Logs:input_type -> devsy.runtime.v1.LogsRequest
+	5,  // 35: devsy.runtime.v1.RuntimeDriver.Info:output_type -> devsy.runtime.v1.InfoResponse
+	8,  // 36: devsy.runtime.v1.RuntimeDriver.Preflight:output_type -> devsy.runtime.v1.PreflightResponse
+	10, // 37: devsy.runtime.v1.RuntimeDriver.ProvisioningPreflight:output_type -> devsy.runtime.v1.ProvisioningPreflightResponse
+	12, // 38: devsy.runtime.v1.RuntimeDriver.ReusePreflight:output_type -> devsy.runtime.v1.ReusePreflightResponse
+	14, // 39: devsy.runtime.v1.RuntimeDriver.Find:output_type -> devsy.runtime.v1.FindResponse
+	20, // 40: devsy.runtime.v1.RuntimeDriver.TargetArchitecture:output_type -> devsy.runtime.v1.TargetArchitectureResponse
+	39, // 41: devsy.runtime.v1.RuntimeDriver.RunImage:output_type -> devsy.runtime.v1.RunImageResponse
+	26, // 42: devsy.runtime.v1.RuntimeDriver.Start:output_type -> devsy.runtime.v1.StartResponse
+	28, // 43: devsy.runtime.v1.RuntimeDriver.Stop:output_type -> devsy.runtime.v1.StopResponse
+	30, // 44: devsy.runtime.v1.RuntimeDriver.Delete:output_type -> devsy.runtime.v1.DeleteResponse
+	34, // 45: devsy.runtime.v1.RuntimeDriver.Exec:output_type -> devsy.runtime.v1.ExecServerMessage
+	35, // 46: devsy.runtime.v1.RuntimeDriver.Logs:output_type -> devsy.runtime.v1.OutputChunk
+	35, // [35:47] is the sub-list for method output_type
+	23, // [23:35] is the sub-list for method input_type
 	23, // [23:23] is the sub-list for extension type_name
 	23, // [23:23] is the sub-list for extension extendee
 	0,  // [0:23] is the sub-list for field type_name
@@ -2595,13 +2704,13 @@ func file_devsy_runtime_v1_runtime_proto_init() {
 	if File_devsy_runtime_v1_runtime_proto != nil {
 		return
 	}
-	file_devsy_runtime_v1_runtime_proto_msgTypes[15].OneofWrappers = []any{}
-	file_devsy_runtime_v1_runtime_proto_msgTypes[25].OneofWrappers = []any{
+	file_devsy_runtime_v1_runtime_proto_msgTypes[17].OneofWrappers = []any{}
+	file_devsy_runtime_v1_runtime_proto_msgTypes[27].OneofWrappers = []any{
 		(*ExecClientMessage_Start)(nil),
 		(*ExecClientMessage_Stdin)(nil),
 		(*ExecClientMessage_CloseStdin)(nil),
 	}
-	file_devsy_runtime_v1_runtime_proto_msgTypes[28].OneofWrappers = []any{
+	file_devsy_runtime_v1_runtime_proto_msgTypes[30].OneofWrappers = []any{
 		(*ExecServerMessage_Stdout)(nil),
 		(*ExecServerMessage_Stderr)(nil),
 		(*ExecServerMessage_Exit)(nil),
@@ -2612,7 +2721,7 @@ func file_devsy_runtime_v1_runtime_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_devsy_runtime_v1_runtime_proto_rawDesc), len(file_devsy_runtime_v1_runtime_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   38,
+			NumMessages:   40,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -93,7 +93,7 @@ func (d *Driver) Info(context.Context, *runtimev1.InfoRequest) (*runtimev1.InfoR
 		Capabilities: &runtimev1.Capabilities{
 			MountTypes:            slices.Clone(d.config.MountTypes),
 			RecreateMode:          runtimev1.RecreateMode_RECREATE_MODE_STOP,
-			ProvisioningPreflight: true, Logs: true,
+			ProvisioningPreflight: true, Logs: true, ReusePreflight: true,
 		},
 	}
 	if d.config.Mode == IncompatibleVersion {
