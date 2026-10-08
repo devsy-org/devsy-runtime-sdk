@@ -147,7 +147,8 @@ jobs:
           if [[ "$behind" -gt 0 ]]; then
             gh pr update-branch "$release_pr"
           fi
-          gh pr merge --auto --squash "$release_pr"
+          release_title="$(gh pr view "$release_pr" --json title --jq .title)"
+          gh pr merge --auto --squash --subject "$release_title" --body '' "$release_pr"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
