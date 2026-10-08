@@ -56,6 +56,11 @@ final head; resolve significant valid findings before merging. A skipped or
 rate-limited review is pending, not a completed review. Merge only with human
 authorization covering the change.
 
+Generated release PRs containing only version metadata and changelog updates
+auto-merge after applicable CI passes. Do not request Greptile or CodeRabbit
+reviews for these PRs or treat skipped reviews as blockers. Code and workflow
+changes retain the review requirements above.
+
 **Merged commits must contain only a single-line Conventional Commit subject,
 with an empty body.** When authorized to merge, squash with an explicit subject
 and an explicitly empty body; never copy the PR description or commit list into

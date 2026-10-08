@@ -64,6 +64,24 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Verify generated release changes
+        if: github.event_name == 'pull_request' && github.head_ref == 'release-please--branches--main'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changes="$(mktemp)"
+          trap 'rm -f "$changes"' EXIT
+          git diff --name-only -z "$BASE_SHA...$HEAD_SHA" > "$changes"
+          test -s "$changes"
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              .release-please-manifest.json|CHANGELOG.md) ;;
+              *) printf 'Unexpected release file: %s\n' "$path" >&2; exit 1 ;;
+            esac
+          done < "$changes"
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
       - run: golangci-lint run
       - run: golangci-lint fmt --diff
@@ -104,10 +122,21 @@ jobs:
             ${{ runner.temp }}/runtime probe λ/report.json
             ${{ runner.temp }}/runtime probe λ/supervised-report.json
           if-no-files-found: error
+  ci-success:
+    name: CI Success
+    if: always()
+    needs: [test, generated, pre-commit, lint, spawn-probe]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every validation job to pass
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: jq -e 'all(.[]; .result == "success")' <<< "$RESULTS"
   release-please:
     name: Release Please
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test, generated, pre-commit, lint, spawn-probe]
+    needs: ci-success
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -124,31 +153,30 @@ jobs:
           private-key: ${{ secrets.DEVSY_GITHUB_APP_PRIVATE_KEY }}
           repositories: ${{ github.event.repository.name }}
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+        id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           token: ${{ steps.app-token.outputs.token }}
       - name: Enable release PR auto-merge
+        if: steps.release.outputs.prs_created == 'true'
         shell: bash
         run: |
-          release_pr="$(gh pr list --state open --base main \
-            --head release-please--branches--main --label 'autorelease: pending' \
-            --json number --jq '.[].number')"
-          if [[ -z "$release_pr" ]]; then
-            echo "No pending release PR."
-            exit 0
-          fi
-          if [[ ! "$release_pr" =~ ^[0-9]+$ ]]; then
-            echo "Expected exactly one pending release PR." >&2
-            exit 1
-          fi
+          release_pr="$(jq -er '
+            if length == 1 then .[0].number
+            else error("Expected exactly one release PR") end
+            | select(type == "number" and . > 0 and . == floor)
+          ' <<< "$RELEASE_PRS")"
           release_head="$(gh pr view "$release_pr" --json headRefOid --jq .headRefOid)"
           behind="$(gh api "repos/$GH_REPO/compare/main...$release_head" --jq .behind_by)"
           if [[ "$behind" -gt 0 ]]; then
             gh pr update-branch "$release_pr"
+            release_head="$(gh pr view "$release_pr" --json headRefOid --jq .headRefOid)"
           fi
           release_title="$(gh pr view "$release_pr" --json title --jq .title)"
-          gh pr merge --auto --squash --subject "$release_title" --body '' "$release_pr"
+          gh pr merge --auto --squash --subject "$release_title" --body '' \
+            --match-head-commit "$release_head" "$release_pr"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
