@@ -54,7 +54,7 @@ func (t *processTree) Wait() error {
 	killed := t.killGroup()
 	waited := t.cmd.Wait()
 	t.reaped = true
-	return errors.Join(observed, killed, waited, reapDescendants())
+	return errors.Join(observed, killed, waited, reapDescendants(t.cmd.Process.Pid))
 }
 
 func (t *processTree) Kill() error {

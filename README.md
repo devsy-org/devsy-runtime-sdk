@@ -366,7 +366,7 @@ after process reaping, until the reader drains them.
 
 | Platform | Ownership mechanism |
 | --- | --- |
-| Linux | Dedicated plugin process group; supervisor adopts and reaps orphaned descendants as a subreaper |
+| Linux | Dedicated plugin process group; supervisor adopts orphaned descendants as a subreaper and reaps those in the leased group |
 | macOS | Dedicated plugin process group; supervisor reaps the plugin and the OS adopts orphaned descendants |
 | Windows | Supervisor joins a non-breakaway Job Object before spawning the plugin; descendants inherit membership, and the last handle closes when the supervisor exits |
 
@@ -383,6 +383,8 @@ session), or privilege elevation requires an additional explicit owner. On Unix,
 simultaneously killing the host and its supervisor prevents that supervisor from
 performing cleanup. Long-lived runtime services and container resources must have
 their own resource lifecycle rather than depend on these command processes.
+The Linux supervisor does not wait for separately owned backend sessions to
+exit; the OS adopts them when the supervisor exits.
 
 The default environment remains inherited, with optional `Env` overrides;
 client-assigned handshake, certificate, and socket metadata retain precedence.

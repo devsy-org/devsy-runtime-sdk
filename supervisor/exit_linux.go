@@ -20,10 +20,12 @@ func watchExit(pid int) (func() error, error) {
 	}, nil
 }
 
-func reapDescendants() error {
+func reapDescendants(group int) error {
 	for {
 		var status unix.WaitStatus
-		_, err := unix.Wait4(-1, &status, 0, nil)
+		// Subreaping also adopts detached backend services. Only the leased
+		// process group belongs to this operation; other sessions outlive it.
+		_, err := unix.Wait4(-group, &status, 0, nil)
 		if errors.Is(err, unix.ECHILD) {
 			return nil
 		}
