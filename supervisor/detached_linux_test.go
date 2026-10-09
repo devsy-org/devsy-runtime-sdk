@@ -51,6 +51,11 @@ func TestRunnerDoesNotWaitForDetachedBackend(t *testing.T) {
 	if err := runtime.Wait(ctx); err != nil {
 		t.Fatalf("supervisor waited for detached backend: %v", err)
 	}
+	assertDetachedBackendResponds(ctx, t, socket)
+}
+
+func assertDetachedBackendResponds(ctx context.Context, t *testing.T, socket string) {
+	t.Helper()
 	connection, err := (&net.Dialer{}).DialContext(ctx, "unix", socket)
 	if err != nil {
 		t.Fatalf("detached backend unavailable after session cleanup: %v", err)
