@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.5.1...v1.5.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* **supervisor:** reap only leased process descendants ([2e44b88](https://github.com/devsy-org/devsy-runtime-sdk/commit/2e44b8861f7346ef9eda266290ed878bdc4c3377))
+
 ## [1.5.1](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.5.0...v1.5.1) (2026-10-08)
 
 
