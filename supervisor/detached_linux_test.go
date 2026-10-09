@@ -41,6 +41,8 @@ func TestRunnerDoesNotWaitForDetachedBackend(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = runtime.Kill(context.Background()) })
+	stopRead := context.AfterFunc(ctx, func() { _ = runtime.Stdout().Close() })
+	defer stopRead()
 	var pid int
 	if err := json.NewDecoder(runtime.Stdout()).Decode(&pid); err != nil {
 		t.Fatal(err)
