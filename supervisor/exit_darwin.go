@@ -6,8 +6,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func adoptDescendants() error { return nil }
-func reapDescendants() error  { return nil }
+func adoptDescendants() error     { return nil }
+func reapDescendants(_ int) error { return nil }
 
 func watchExit(pid int) (func() error, error) {
 	queue, err := unix.Kqueue()
