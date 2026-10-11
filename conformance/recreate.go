@@ -53,6 +53,7 @@ func (s *session) checkRecreation(t *testing.T) {
 	_, err = s.client.RunImage(s.ctx, invalid)
 	RequireRuntimeError(t, err, runtimev1.RuntimeErrorCode_RUNTIME_ERROR_CODE_INVALID_ARGUMENT)
 	s.assertRecreateSnapshot(t, before)
+	s.checkInvalidRecreateMounts(t, before)
 	replacement := proto.CloneOf(s.request)
 	replacement.AllowRecreate = true
 	const generationKey = "devsy.conformance.recreate-generation"
@@ -72,6 +73,46 @@ func (s *session) checkRecreation(t *testing.T) {
 	_, err = s.client.RunImage(s.ctx, replacement)
 	RequireRuntimeError(t, err, runtimev1.RuntimeErrorCode_RUNTIME_ERROR_CODE_ALREADY_EXISTS)
 	s.assertRecreateSnapshot(t, after)
+}
+
+func (s *session) checkInvalidRecreateMounts(t *testing.T, before *runtimev1.FindResponse) {
+	t.Helper()
+	for _, test := range []struct {
+		name           string
+		workspaceMount *runtimev1.Mount
+		mount          *runtimev1.Mount
+	}{
+		{
+			name: "unsupported workspace mount",
+			workspaceMount: &runtimev1.Mount{
+				Type:   runtimev1.MountType(99),
+				Target: "/unsupported-workspace-mount",
+			},
+		},
+		{
+			name: "unsupported additional mount",
+			mount: &runtimev1.Mount{
+				Type:   runtimev1.MountType(99),
+				Target: "/unsupported-additional-mount",
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			invalidMount := proto.CloneOf(s.request)
+			invalidMount.AllowRecreate = true
+			if test.workspaceMount != nil {
+				invalidMount.WorkspaceMount = proto.CloneOf(test.workspaceMount)
+			} else {
+				invalidMount.Mounts = append(invalidMount.Mounts, proto.CloneOf(test.mount))
+			}
+			if invalidMount.GetImage() == "" {
+				t.Fatal("invalid-mount request must retain a nonempty image")
+			}
+			_, err := s.client.RunImage(s.ctx, invalidMount)
+			RequireRuntimeError(t, err, runtimev1.RuntimeErrorCode_RUNTIME_ERROR_CODE_UNSUPPORTED)
+			s.assertRecreateSnapshot(t, before)
+		})
+	}
 }
 
 func (s *session) recreateSnapshot(t *testing.T) *runtimev1.FindResponse {
