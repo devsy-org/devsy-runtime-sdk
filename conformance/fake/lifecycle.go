@@ -39,40 +39,22 @@ func (d *Driver) Find(
 	return &runtimev1.FindResponse{Found: container != nil, Container: container}, nil
 }
 
-// RunImage creates a running workspace and rejects duplicate creation.
+// RunImage creates a workspace or explicitly replaces one in the ON_RUN profile.
+// The fixture validates its supported configuration before writing any state.
 func (d *Driver) RunImage(
 	ctx context.Context,
 	req *runtimev1.RunImageRequest,
 ) (*runtimev1.RunImageResponse, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if err := validateWorkspace(ctx, req.GetWorkspaceId()); err != nil {
-		return nil, err
-	}
-	if req.GetImage() == "" {
-		return nil, runtimeError(
-			codes.InvalidArgument,
-			runtimev1.RuntimeErrorCode_RUNTIME_ERROR_CODE_INVALID_ARGUMENT,
-			"image is required",
-			false,
-		)
-	}
-	if d.config.Mode == FailRun {
-		return nil, runtimeError(
-			codes.Internal,
-			runtimev1.RuntimeErrorCode_RUNTIME_ERROR_CODE_RUNTIME_FAILURE,
-			"fake image creation failed",
-			false,
-		)
-	}
-	if err := d.validateMounts(req); err != nil {
+	if err := d.validateRunImage(ctx, req); err != nil {
 		return nil, err
 	}
 	container, err := d.load(req.GetWorkspaceId())
 	if err != nil {
 		return nil, storageError()
 	}
-	if container != nil {
+	if container != nil && (!d.config.RecreateOnRun || !req.GetAllowRecreate()) {
 		return nil, runtimeError(
 			codes.AlreadyExists,
 			runtimev1.RuntimeErrorCode_RUNTIME_ERROR_CODE_ALREADY_EXISTS,
@@ -85,6 +67,29 @@ func (d *Driver) RunImage(
 		return nil, storageError()
 	}
 	return &runtimev1.RunImageResponse{}, nil
+}
+
+func (d *Driver) validateRunImage(ctx context.Context, req *runtimev1.RunImageRequest) error {
+	if err := validateWorkspace(ctx, req.GetWorkspaceId()); err != nil {
+		return err
+	}
+	if req.GetImage() == "" {
+		return runtimeError(
+			codes.InvalidArgument,
+			runtimev1.RuntimeErrorCode_RUNTIME_ERROR_CODE_INVALID_ARGUMENT,
+			"image is required",
+			false,
+		)
+	}
+	if d.config.Mode == FailRun {
+		return runtimeError(
+			codes.Internal,
+			runtimev1.RuntimeErrorCode_RUNTIME_ERROR_CODE_RUNTIME_FAILURE,
+			"fake image creation failed",
+			false,
+		)
+	}
+	return d.validateMounts(req)
 }
 
 // Start normalizes an already-running workspace to success.

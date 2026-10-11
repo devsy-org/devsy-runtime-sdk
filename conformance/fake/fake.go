@@ -39,6 +39,8 @@ type Config struct {
 	Mode     string
 	// MountTypes defaults to all when nil; an empty slice advertises no mounts.
 	MountTypes []runtimev1.MountType
+	// RecreateOnRun enables negotiated, explicitly authorized replacement.
+	RecreateOnRun bool
 }
 
 // Driver implements the protocol without launching a real container or command.
@@ -83,7 +85,10 @@ func New(config Config) (*Driver, error) {
 }
 
 // Info reports supported capabilities or the selected discovery failure.
-func (d *Driver) Info(context.Context, *runtimev1.InfoRequest) (*runtimev1.InfoResponse, error) {
+func (d *Driver) Info(
+	_ context.Context,
+	req *runtimev1.InfoRequest,
+) (*runtimev1.InfoResponse, error) {
 	if d.config.Mode == CrashAfterHandshake {
 		os.Exit(23)
 	}
@@ -95,6 +100,12 @@ func (d *Driver) Info(context.Context, *runtimev1.InfoRequest) (*runtimev1.InfoR
 			RecreateMode:          runtimev1.RecreateMode_RECREATE_MODE_STOP,
 			ProvisioningPreflight: true, Logs: true, ReusePreflight: true,
 		},
+	}
+	if d.config.RecreateOnRun {
+		info.Capabilities.RecreateMode = runtimev1.RecreateMode_RECREATE_MODE_DELETE
+		if req.GetSupportsRecreateOnRun() {
+			info.Capabilities.RecreateMode = runtimev1.RecreateMode_RECREATE_MODE_ON_RUN
+		}
 	}
 	if d.config.Mode == IncompatibleVersion {
 		info.ApiMajor++

@@ -23,6 +23,12 @@ func main() {
 		"private state directory (required; one active plugin owner)",
 	)
 	flag.StringVar(&config.Mode, "mode", fake.Normal, "fixture scenario; see SDK README")
+	flag.BoolVar(
+		&config.RecreateOnRun,
+		"recreate-on-run",
+		false,
+		"enable negotiated recreation fixture",
+	)
 	delay := flag.Duration(
 		"handshake-delay",
 		time.Minute,

@@ -81,6 +81,10 @@ const (
 	RecreateMode_RECREATE_MODE_UNSPECIFIED RecreateMode = 0
 	RecreateMode_RECREATE_MODE_DELETE      RecreateMode = 1
 	RecreateMode_RECREATE_MODE_STOP        RecreateMode = 2
+	// The host leaves an existing workspace intact before RunImage. Replacement
+	// requires allow_recreate and validation of the complete effective config
+	// before destruction. Advertise only to opted-in hosts; requires runtime API 1.3.
+	RecreateMode_RECREATE_MODE_ON_RUN RecreateMode = 3
 )
 
 // Enum value maps for RecreateMode.
@@ -89,11 +93,13 @@ var (
 		0: "RECREATE_MODE_UNSPECIFIED",
 		1: "RECREATE_MODE_DELETE",
 		2: "RECREATE_MODE_STOP",
+		3: "RECREATE_MODE_ON_RUN",
 	}
 	RecreateMode_value = map[string]int32{
 		"RECREATE_MODE_UNSPECIFIED": 0,
 		"RECREATE_MODE_DELETE":      1,
 		"RECREATE_MODE_STOP":        2,
+		"RECREATE_MODE_ON_RUN":      3,
 	}
 )
 
@@ -253,9 +259,13 @@ func (RuntimeErrorCode) EnumDescriptor() ([]byte, []int) {
 }
 
 type InfoRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The host understands RECREATE_MODE_ON_RUN (API 1.3). This is capability
+	// negotiation, not permission to replace any workspace. An ON_RUN-capable
+	// runtime must report RECREATE_MODE_DELETE when this field is false or absent.
+	SupportsRecreateOnRun bool `protobuf:"varint,1,opt,name=supports_recreate_on_run,json=supportsRecreateOnRun,proto3" json:"supports_recreate_on_run,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *InfoRequest) Reset() {
@@ -286,6 +296,13 @@ func (x *InfoRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use InfoRequest.ProtoReflect.Descriptor instead.
 func (*InfoRequest) Descriptor() ([]byte, []int) {
 	return file_devsy_runtime_v1_runtime_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *InfoRequest) GetSupportsRecreateOnRun() bool {
+	if x != nil {
+		return x.SupportsRecreateOnRun
+	}
+	return false
 }
 
 type InfoResponse struct {
@@ -1196,7 +1213,12 @@ type RunImageRequest struct {
 	RemoteUser string `protobuf:"bytes,20,opt,name=remote_user,json=remoteUser,proto3" json:"remote_user,omitempty"`
 	// The host will provision the developer environment after starting this image.
 	// Runtimes must not assume the final developer identity exists in the image.
-	Dockerless    bool `protobuf:"varint,21,opt,name=dockerless,proto3" json:"dockerless,omitempty"`
+	Dockerless bool `protobuf:"varint,21,opt,name=dockerless,proto3" json:"dockerless,omitempty"`
+	// Explicit permission for an ON_RUN runtime to replace an existing workspace
+	// (API 1.3). False or absent never authorizes replacement. Even when true, the
+	// complete effective config must pass validation before destruction. Later
+	// materialization or launch failure does not promise rollback of the old resource.
+	AllowRecreate bool `protobuf:"varint,22,opt,name=allow_recreate,json=allowRecreate,proto3" json:"allow_recreate,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1374,6 +1396,13 @@ func (x *RunImageRequest) GetRemoteUser() string {
 func (x *RunImageRequest) GetDockerless() bool {
 	if x != nil {
 		return x.Dockerless
+	}
+	return false
+}
+
+func (x *RunImageRequest) GetAllowRecreate() bool {
+	if x != nil {
+		return x.AllowRecreate
 	}
 	return false
 }
@@ -2380,8 +2409,9 @@ var File_devsy_runtime_v1_runtime_proto protoreflect.FileDescriptor
 
 const file_devsy_runtime_v1_runtime_proto_rawDesc = "" +
 	"\n" +
-	"\x1edevsy/runtime/v1/runtime.proto\x12\x10devsy.runtime.v1\"\r\n" +
-	"\vInfoRequest\"\xa0\x02\n" +
+	"\x1edevsy/runtime/v1/runtime.proto\x12\x10devsy.runtime.v1\"F\n" +
+	"\vInfoRequest\x127\n" +
+	"\x18supports_recreate_on_run\x18\x01 \x01(\bR\x15supportsRecreateOnRun\"\xa0\x02\n" +
 	"\fInfoResponse\x12\x1b\n" +
 	"\tapi_major\x18\x01 \x01(\rR\bapiMajor\x12\x1b\n" +
 	"\tapi_minor\x18\x02 \x01(\rR\bapiMinor\x12\x1f\n" +
@@ -2444,7 +2474,7 @@ const file_devsy_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x19TargetArchitectureRequest\x12!\n" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\"@\n" +
 	"\x1aTargetArchitectureResponse\x12\"\n" +
-	"\farchitecture\x18\x01 \x01(\tR\farchitecture\"\xed\x06\n" +
+	"\farchitecture\x18\x01 \x01(\tR\farchitecture\"\x94\a\n" +
 	"\x0fRunImageRequest\x12!\n" +
 	"\fworkspace_id\x18\x01 \x01(\tR\vworkspaceId\x12\x14\n" +
 	"\x05image\x18\x02 \x01(\tR\x05image\x12.\n" +
@@ -2474,7 +2504,8 @@ const file_devsy_runtime_v1_runtime_proto_rawDesc = "" +
 	"remoteUser\x12\x1e\n" +
 	"\n" +
 	"dockerless\x18\x15 \x01(\bR\n" +
-	"dockerless\x1a>\n" +
+	"dockerless\x12%\n" +
+	"\x0eallow_recreate\x18\x16 \x01(\bR\rallowRecreate\x1a>\n" +
 	"\x10EnvironmentEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\r\n" +
@@ -2546,11 +2577,12 @@ const file_devsy_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x16MOUNT_TYPE_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fMOUNT_TYPE_BIND\x10\x01\x12\x15\n" +
 	"\x11MOUNT_TYPE_VOLUME\x10\x02\x12\x14\n" +
-	"\x10MOUNT_TYPE_TMPFS\x10\x03*_\n" +
+	"\x10MOUNT_TYPE_TMPFS\x10\x03*y\n" +
 	"\fRecreateMode\x12\x1d\n" +
 	"\x19RECREATE_MODE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14RECREATE_MODE_DELETE\x10\x01\x12\x16\n" +
-	"\x12RECREATE_MODE_STOP\x10\x02*]\n" +
+	"\x12RECREATE_MODE_STOP\x10\x02\x12\x18\n" +
+	"\x14RECREATE_MODE_ON_RUN\x10\x03*]\n" +
 	"\x13GpuRequirementValue\x12\x13\n" +
 	"\x0fGPU_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tGPU_FALSE\x10\x01\x12\x10\n" +

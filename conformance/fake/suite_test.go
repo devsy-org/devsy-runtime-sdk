@@ -2,6 +2,7 @@ package fake_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/devsy-org/devsy-runtime-sdk/conformance"
 	"github.com/devsy-org/devsy-runtime-sdk/conformance/fake"
@@ -9,23 +10,34 @@ import (
 )
 
 func TestProtocolConformance(t *testing.T) {
-	conformance.Run(t, conformance.Options{
-		Connect: func(t *testing.T) runtimev1.RuntimeDriverClient {
-			process := launch(t, t.TempDir(), fake.Conformance)
-			t.Cleanup(func() {
-				process.Kill()
-				if !process.Exited() {
-					t.Error("conformance plugin was not reaped")
-				}
+	for _, profile := range []struct {
+		name          string
+		recreateOnRun bool
+	}{{"default", false}, {"on-run", true}} {
+		t.Run(profile.name, func(t *testing.T) {
+			conformance.Run(t, conformance.Options{
+				Connect: func(t *testing.T) runtimev1.RuntimeDriverClient {
+					process := launchProcess(t, launchOptions{
+						directory: t.TempDir(), mode: fake.Conformance,
+						timeout: 5 * time.Second, mounts: allMounts,
+						recreateOnRun: profile.recreateOnRun,
+					})
+					t.Cleanup(func() {
+						process.Kill()
+						if !process.Exited() {
+							t.Error("conformance plugin was not reaped")
+						}
+					})
+					return connect(t, process)
+				},
+				Workspace: func(t *testing.T) *runtimev1.RunImageRequest {
+					return &runtimev1.RunImageRequest{WorkspaceId: t.Name(), Image: "fake:image"}
+				},
+				Command: conformanceCommand,
+				LogData: []byte("fake stdout\x00\xff\nfake stderr\n"),
 			})
-			return connect(t, process)
-		},
-		Workspace: func(t *testing.T) *runtimev1.RunImageRequest {
-			return &runtimev1.RunImageRequest{WorkspaceId: t.Name(), Image: "fake:image"}
-		},
-		Command: conformanceCommand,
-		LogData: []byte("fake stdout\x00\xff\nfake stderr\n"),
-	})
+		})
+	}
 }
 
 func conformanceCommand(scenario conformance.Scenario, workspaceID string) *runtimev1.ExecStart {
