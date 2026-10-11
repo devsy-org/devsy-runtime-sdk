@@ -80,7 +80,8 @@ case before making changes to workspace resources.
 Hosts must forward both values and runtimes must handle them before enabling
 an implementation that depends on workspace ownership. These fields describe
 provisioning intent; they do not authorize resource replacement. Duplicate
-creation and explicit Delete remain separate operations.
+creation is rejected unless a runtime implements the explicit API 1.3
+authorization described below. Explicit Delete remains a separate operation.
 
 ### Reuse validation in API 1.2
 
@@ -98,6 +99,38 @@ Missing workspaces return `NotFound`; backend and context failures remain errors
 Hosts skip this optional RPC when it is not advertised. The conformance suite
 checks successful reuse and cancellation without resource mutation; backend
 suites must cover their own incompatible contracts.
+
+### Explicit recreation in API 1.3
+
+A host that implements recreate-on-run sets `InfoRequest.supports_recreate_on_run`.
+A supporting runtime may then advertise `RECREATE_MODE_ON_RUN` with API minor 3
+or newer. Without that opt-in (including an empty request from an older host),
+it must advertise `RECREATE_MODE_DELETE`. Runtimes without this capability keep
+their existing DELETE or STOP behavior; unknown request fields are ignored by
+older providers. `ValidateInfo` rejects ON_RUN below API 1.3 and still rejects
+unknown recreate modes.
+
+ON_RUN means the host leaves the existing resource intact before RunImage.
+Only an explicitly authorized recreation supplies `RunImageRequest.allow_recreate=true`.
+False or omitted never authorizes replacement; an otherwise-valid duplicate
+returns AlreadyExists without mutating the existing workspace. Even when true,
+the runtime must validate the complete effective configuration before destroying
+the old resource. This does not promise rollback if later materialization or
+launch fails. Fresh creation does not require permission to replace anything.
+
+Info opt-in advertises host capability; it is not replacement permission. The
+SDK forwards requests unchanged and does not automatically negotiate or downgrade
+capabilities. Implement the response selection in the runtime's existing Info
+method. RunImage authorization is per request, never dependent on a previous
+Info call or process-local session state: hosts may launch a fresh runtime
+process for each operation. Host orchestration sends the permission bit only
+for explicit recreation with negotiated ON_RUN. Legacy modes retain their
+existing host-managed recreation path.
+
+This preserves old-host/new-provider interoperability through DELETE, and
+new-host/old-provider interoperability through the older provider's existing
+mode. It cannot retrofit validation-before-deletion into an old host's legacy
+recreation path.
 
 ## Development
 
@@ -155,7 +188,11 @@ Logs support. Select mount profiles with `--mount-types all|none|bind|volume|tmp
 or a comma-separated subset. Unsupported mounts fail before workspace creation.
 Exec and Logs require a running workspace. Start and Stop are idempotent for
 existing resources; Delete is idempotent even for absent resources. Duplicate
-RunImage returns AlreadyExists. Lifecycle failures include RuntimeError details.
+RunImage returns AlreadyExists unless the optional `--recreate-on-run` profile
+is enabled and that creation request explicitly sets `allow_recreate=true`.
+This profile advertises ON_RUN only when discovery opts in; discovery alone
+never authorizes replacement. The default profile retains STOP behavior.
+Lifecycle failures include RuntimeError details.
 Output frames are limited to 32 KiB and preserve binary bytes.
 
 The SDK tests exercise lifecycle state across real plugin restarts, fault modes,
@@ -179,7 +216,9 @@ conformance.Run(t, conformance.Options{
 
 `Connect` must create a fresh client per subtest and register bounded process and
 connection cleanup with `t.Cleanup`. `Workspace` must provide an image and a
-unique workspace ID that is initially absent. Configure the image's entrypoint
+unique workspace ID that is initially absent, with `allow_recreate=false`.
+The suite sets authorization explicitly only for negotiated replacement tests.
+Configure the image's entrypoint
 so its finite log output matches `LogData` if the runtime advertises Logs.
 `Command` receives the scenario and workspace ID; return exact argv with
 `tty=false`. The suite does not choose a shell or construct commands for you.
@@ -190,6 +229,9 @@ resources, malformed Exec frames, binary preservation, separate output channels,
 12 MiB of simultaneous stdin/stdout/stderr, consumer backpressure, early exit,
 nonzero and signal exits, cancellation, deadlines, and finite merged Logs.
 Logs and provisioning preflight checks follow the advertised capabilities.
+When ON_RUN is negotiated, running and stopped workspace checks require
+unauthorized duplicates and invalid authorized requests to preserve the full
+Find response, followed by a valid explicitly authorized replacement.
 Streaming comparisons use bounded buffers and require a single terminal exit
 frame after all output. Data frames must be nonempty and follow the SDK's
 recommended 32 KiB bound. Send goroutines are canceled and joined on failure.
@@ -219,7 +261,8 @@ The fake executable's `conformance` mode uses scenario names as argv[0], with
 accepts exactly `/bin/sh`, `-c`, `printf 'shell stdout\n'`; the fake simulates
 that output rather than executing a host shell. `error <CATEGORY>` injects a
 structured error, and `crash` emits readiness then exits after one input frame.
-CI runs the full reusable suite against this executable on Linux, macOS, and
+CI runs the full reusable suite against both the default and `--recreate-on-run`
+profiles of this executable on Linux, macOS, and
 Windows, along with fault, mount-profile, crash/restart, and process-reap tests.
 
 Host launcher trust, startup cancellation, descendant process ownership,

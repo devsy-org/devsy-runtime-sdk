@@ -62,6 +62,7 @@ func Run(t *testing.T, options Options) {
 		{"discovery", discovery},
 		{"lifecycle", lifecycle},
 		{"reuse-preflight", reusePreflight},
+		{"recreate-on-run", recreateOnRun},
 		{"binary-echo", binaryEcho},
 		{"empty-stdin", emptyInput},
 		{"arguments", arguments},
@@ -101,6 +102,22 @@ func open(t *testing.T, options Options) *session {
 	if request == nil || request.GetWorkspaceId() == "" || request.GetImage() == "" {
 		t.Fatal("Workspace requires a unique workspace_id and image")
 	}
+	info := discoveryWithoutOptIn(ctx, t, client)
+	if request.GetAllowRecreate() {
+		t.Fatal("Workspace must not authorize replacement for initial creation")
+	}
+	return &session{
+		ctx: ctx, client: client, request: proto.CloneOf(request),
+		info: info, options: options,
+	}
+}
+
+func discoveryWithoutOptIn(
+	ctx context.Context,
+	t *testing.T,
+	client runtimev1.RuntimeDriverClient,
+) *runtimev1.InfoResponse {
+	t.Helper()
 	info, err := client.Info(ctx, &runtimev1.InfoRequest{})
 	if err != nil {
 		t.Fatal(err)
@@ -108,10 +125,10 @@ func open(t *testing.T, options Options) *session {
 	if err := runtimev1.ValidateInfo(info); err != nil {
 		t.Fatal(err)
 	}
-	return &session{
-		ctx: ctx, client: client, request: proto.CloneOf(request),
-		info: info, options: options,
+	if info.GetCapabilities().GetRecreateMode() == runtimev1.RecreateMode_RECREATE_MODE_ON_RUN {
+		t.Fatal("runtime advertised ON_RUN without host opt-in")
 	}
+	return info
 }
 
 func (s *session) create(t *testing.T) {

@@ -1,6 +1,7 @@
 package runtimev1_test
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -104,6 +105,107 @@ func validateInfoCases(t *testing.T, cases []infoValidationCase) {
 				t.Fatalf("got %v, want %s", err, tc.want)
 			}
 		})
+	}
+}
+
+// ValidateInfo checks response compatibility; provider Info must separately
+// gate ON_RUN on the request's opt-in because this API accepts only a response.
+func TestValidateInfoRecreateOnRunVersion(t *testing.T) {
+	for _, minor := range []uint32{0, 1, 2, 3, 99} {
+		info := validInfo()
+		info.ApiMinor = minor
+		info.Capabilities.RecreateMode = v1.RecreateMode_RECREATE_MODE_ON_RUN
+		err := v1.ValidateInfo(info)
+		if minor < 3 {
+			if err == nil || !strings.Contains(err.Error(), "requires API 1.3") {
+				t.Errorf("ON_RUN at API 1.%d: got %v, want API 1.3 requirement", minor, err)
+			}
+		} else if err != nil {
+			t.Errorf("ON_RUN at API 1.%d: %v", minor, err)
+		}
+		for _, mode := range []v1.RecreateMode{
+			v1.RecreateMode_RECREATE_MODE_DELETE,
+			v1.RecreateMode_RECREATE_MODE_STOP,
+		} {
+			info.Capabilities.RecreateMode = mode
+			if err := v1.ValidateInfo(info); err != nil {
+				t.Errorf("legacy mode %s at API 1.%d: %v", mode, minor, err)
+			}
+		}
+	}
+}
+
+func TestInfoRecreateOptInWire(t *testing.T) {
+	var absent *v1.InfoRequest
+	if absent.GetSupportsRecreateOnRun() {
+		t.Fatal("nil discovery request opted into ON_RUN")
+	}
+	for _, wire := range [][]byte{nil, {0x08, 0x00}} {
+		decoded := new(v1.InfoRequest)
+		unmarshalWire(t, wire, decoded)
+		if decoded.GetSupportsRecreateOnRun() {
+			t.Fatal("omitted or explicit false discovery field opted into ON_RUN")
+		}
+		if encoded := marshalWire(t, decoded); len(encoded) != 0 {
+			t.Fatalf("zero-value Info request changed legacy payload: %x", encoded)
+		}
+	}
+	input := &v1.InfoRequest{SupportsRecreateOnRun: true}
+	wire := marshalWire(t, input)
+	if !bytes.Equal(wire, []byte{0x08, 0x01}) {
+		t.Fatalf("opt-in must use field 1: %x", wire)
+	}
+	decoded := new(v1.InfoRequest)
+	unmarshalWire(t, wire, decoded)
+	if !decoded.GetSupportsRecreateOnRun() {
+		t.Fatal("discovery opt-in lost in transit")
+	}
+}
+
+func TestRunImageRecreateAuthorizationWire(t *testing.T) {
+	var absent *v1.RunImageRequest
+	if absent.GetAllowRecreate() {
+		t.Fatal("nil creation request authorized replacement")
+	}
+	for _, wire := range [][]byte{nil, {0xb0, 0x01, 0x00}} {
+		decoded := new(v1.RunImageRequest)
+		unmarshalWire(t, wire, decoded)
+		if decoded.GetAllowRecreate() {
+			t.Fatal("omitted or explicit false creation field authorized replacement")
+		}
+		if encoded := marshalWire(t, decoded); len(encoded) != 0 {
+			t.Fatalf("zero-value authorization changed legacy payload: %x", encoded)
+		}
+	}
+	wire := marshalWire(t, &v1.RunImageRequest{AllowRecreate: true})
+	if !bytes.Equal(wire, []byte{0xb0, 0x01, 0x01}) {
+		t.Fatalf("authorization must use field 22: %x", wire)
+	}
+	input := &v1.RunImageRequest{
+		WorkspaceId: "preserved-workspace", Image: "preserved-image", RemoteUser: "developer",
+		Dockerless: true, Privileged: new(false), AllowRecreate: true,
+	}
+	wire = marshalWire(t, input)
+	decoded := new(v1.RunImageRequest)
+	unmarshalWire(t, wire, decoded)
+	if !proto.Equal(input, decoded) {
+		t.Fatal("creation authorization or existing creation fields changed in transit")
+	}
+}
+
+func marshalWire(t *testing.T, message proto.Message) []byte {
+	t.Helper()
+	wire, err := proto.Marshal(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return wire
+}
+
+func unmarshalWire(t *testing.T, wire []byte, message proto.Message) {
+	t.Helper()
+	if err := proto.Unmarshal(wire, message); err != nil {
+		t.Fatal(err)
 	}
 }
 

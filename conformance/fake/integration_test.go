@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"testing"
 	"time"
 
@@ -61,10 +62,11 @@ func launchWithTimeout(t *testing.T, dir, mode string, timeout time.Duration) *h
 }
 
 type launchOptions struct {
-	directory string
-	mode      string
-	timeout   time.Duration
-	mounts    string
+	directory     string
+	mode          string
+	timeout       time.Duration
+	mounts        string
+	recreateOnRun bool
 }
 
 func launchProcess(t *testing.T, options launchOptions) *hplugin.Client {
@@ -83,6 +85,7 @@ func launchProcess(t *testing.T, options launchOptions) *hplugin.Client {
 			options.mode,
 			"--mount-types",
 			options.mounts,
+			"--recreate-on-run="+strconv.FormatBool(options.recreateOnRun),
 		),
 		AllowedProtocols: []hplugin.Protocol{hplugin.ProtocolGRPC},
 		StartTimeout:     options.timeout,

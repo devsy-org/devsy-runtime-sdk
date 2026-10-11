@@ -10,7 +10,7 @@ const (
 	// APIMajor changes when the runtime wire contract breaks compatibility.
 	APIMajor uint32 = 1
 	// APIMinor tracks compatible additions within the current major generation.
-	APIMinor uint32 = 2
+	APIMinor uint32 = 3
 	// ChunkSize is the recommended maximum payload for each Exec data frame.
 	ChunkSize = 32 * 1024
 )
@@ -37,29 +37,39 @@ func ValidateInfo(info *InfoResponse) error {
 	if info.DriverName == "" || info.DriverVersion == "" || info.RuntimeName == "" {
 		return errors.New("runtime Info requires driver name, driver version, and runtime name")
 	}
-	if info.GetCapabilities().GetReusePreflight() && info.ApiMinor < 2 {
-		return errors.New("reuse preflight requires API 1.2 or newer")
-	}
-	return validateCapabilities(info.DriverName, info.Capabilities)
+	return validateCapabilities(info.DriverName, info.ApiMinor, info.Capabilities)
 }
 
-func validateCapabilities(driverName string, caps *Capabilities) error {
+func validateCapabilities(driverName string, apiMinor uint32, caps *Capabilities) error {
 	if caps == nil {
 		return errors.New("runtime Info capabilities are missing")
 	}
-	if caps.RecreateMode != RecreateMode_RECREATE_MODE_DELETE &&
-		caps.RecreateMode != RecreateMode_RECREATE_MODE_STOP {
-		return fmt.Errorf(
-			"runtime %q has unsupported recreate mode %d",
-			driverName,
-			caps.RecreateMode,
-		)
+	if caps.ReusePreflight && apiMinor < 2 {
+		return errors.New("reuse preflight requires API 1.2 or newer")
+	}
+	if err := validateRecreateMode(driverName, apiMinor, caps.RecreateMode); err != nil {
+		return err
 	}
 	for _, mount := range caps.MountTypes {
-		if mount != MountType_MOUNT_TYPE_BIND && mount != MountType_MOUNT_TYPE_VOLUME &&
-			mount != MountType_MOUNT_TYPE_TMPFS {
+		switch mount {
+		case MountType_MOUNT_TYPE_BIND, MountType_MOUNT_TYPE_VOLUME, MountType_MOUNT_TYPE_TMPFS:
+		default:
 			return fmt.Errorf("runtime %q has unsupported mount type %d", driverName, mount)
 		}
 	}
 	return nil
+}
+
+func validateRecreateMode(driverName string, apiMinor uint32, mode RecreateMode) error {
+	switch mode {
+	case RecreateMode_RECREATE_MODE_DELETE, RecreateMode_RECREATE_MODE_STOP:
+		return nil
+	case RecreateMode_RECREATE_MODE_ON_RUN:
+		if apiMinor < 3 {
+			return errors.New("recreate on run requires API 1.3 or newer")
+		}
+		return nil
+	default:
+		return fmt.Errorf("runtime %q has unsupported recreate mode %d", driverName, mode)
+	}
 }

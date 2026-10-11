@@ -26,7 +26,12 @@ service RuntimeDriver {
   rpc Logs(LogsRequest) returns (stream OutputChunk);
 }
 
-message InfoRequest {}
+message InfoRequest {
+  // The host understands RECREATE_MODE_ON_RUN (API 1.3). This is capability
+  // negotiation, not permission to replace any workspace. An ON_RUN-capable
+  // runtime must report RECREATE_MODE_DELETE when this field is false or absent.
+  bool supports_recreate_on_run = 1;
+}
 
 message InfoResponse {
   uint32 api_major = 1;
@@ -69,6 +74,10 @@ enum RecreateMode {
   RECREATE_MODE_UNSPECIFIED = 0;
   RECREATE_MODE_DELETE = 1;
   RECREATE_MODE_STOP = 2;
+  // The host leaves an existing workspace intact before RunImage. Replacement
+  // requires allow_recreate and validation of the complete effective config
+  // before destruction. Advertise only to opted-in hosts; requires runtime API 1.3.
+  RECREATE_MODE_ON_RUN = 3;
 }
 
 message PreflightRequest {
@@ -170,6 +179,11 @@ message RunImageRequest {
   // The host will provision the developer environment after starting this image.
   // Runtimes must not assume the final developer identity exists in the image.
   bool dockerless = 21;
+  // Explicit permission for an ON_RUN runtime to replace an existing workspace
+  // (API 1.3). False or absent never authorizes replacement. Even when true, the
+  // complete effective config must pass validation before destruction. Later
+  // materialization or launch failure does not promise rollback of the old resource.
+  bool allow_recreate = 22;
 }
 
 message Mount {
