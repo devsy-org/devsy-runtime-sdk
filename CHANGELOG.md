@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.5.2...v1.6.0) (2026-10-11)
+
+
+### Features
+
+* **runtime:** negotiate recreation on RunImage ([7db0e56](https://github.com/devsy-org/devsy-runtime-sdk/commit/7db0e56325933490e94cd3e92d6a9f5e64fe0b42))
+
 ## [1.5.2](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.5.1...v1.5.2) (2026-10-09)
 
 
