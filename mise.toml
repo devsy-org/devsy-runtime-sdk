@@ -1,6 +1,26 @@
+[settings]
+experimental = true
+lockfile = true
+lockfile_platforms = ["linux-x64", "macos-arm64", "windows-x64"]
+
+[tool_config]
+locked = true
+
 [tools]
 go = "1.26.8"
-protoc = "36.1"
 golangci-lint = "2.13.2"
 prek = "0.5.2"
 buf = "1.73.0"
+protoc = "36.1"
+
+[tasks.setup]
+description = "Install dependencies and git hooks"
+depends = ["setup:dependencies", "setup:hooks"]
+
+[tasks."setup:dependencies"]
+description = "Download Go modules"
+run = "go mod download"
+
+[tasks."setup:hooks"]
+description = "Install prek git hooks"
+run = "prek install"

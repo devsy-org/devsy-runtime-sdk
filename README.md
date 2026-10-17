@@ -136,7 +136,7 @@ recreation path.
 
 ```sh
 mise install
-mise exec -- prek install
+mise run setup:hooks
 mise exec -- prek run --all-files
 mise exec -- go test -race ./...
 mise exec -- go vet ./...
