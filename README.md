@@ -10,23 +10,21 @@ Go 1.26+:
 go get github.com/devsy-org/devsy-runtime-sdk
 ```
 
-The module includes protobuf bindings.
-
 ## Implement a runtime
 
-Implement `runtimev1.RuntimeDriverServer` and embed `UnimplementedRuntimeDriverServer` by value. Call `server.Serve` from `main`; implement `Info`, lifecycle RPCs, and `Exec`. Hosts call `runtimev1.ValidateInfo` before operations.
+Implement `runtimev1.RuntimeDriverServer`, embedding `UnimplementedRuntimeDriverServer` by value. Call `server.Serve` from `main`. Implement `Info`, lifecycle RPCs, `Exec`, and `Logs` when `Info.Capabilities.logs` is true. Hosts call `runtimev1.ValidateInfo`.
 
-Hosts configure `plugin.Handshake()`, `plugin.ProtocolVersion`, and `plugin.ClientPlugins()` with `go-plugin.ProtocolGRPC`, then call `Client.Kill()` during cleanup. The handshake does not authenticate or sandbox runtimes.
+Hosts configure `plugin.Handshake()`, `plugin.ProtocolVersion`, and `plugin.ClientPlugins()` under `go-plugin.ProtocolGRPC`, then call `Client.Kill()`. The handshake is not authentication or sandboxing.
 
-`Exec` frames carry stdout and stderr bytes and end with an exit frame. Cancellation must stop commands and release resources. Send diagnostics to stderr.
+`Exec` frames carry stdout and stderr bytes, followed by one exit frame. Reject output after exit. See [Exec conformance](conformance/exec.go) for chunk limits and exit rules. Cancel commands and release resources; send diagnostics to stderr.
 
-API 1.1: `remote_user` owns the workspace; `user` selects the process user. API 1.2: `ReusePreflight` requires `reuse_preflight`. API 1.3: `RECREATE_MODE_ON_RUN` requires host opt-in through `InfoRequest.supports_recreate_on_run`. Replace only when `RunImageRequest.allow_recreate=true`; validate before removal. Without permission, duplicates return `AlreadyExists` without mutation.
+API 1.1: `remote_user` owns workspaces; `user` selects the process user. API 1.2: `ReusePreflight` requires `reuse_preflight`. API 1.3: `RECREATE_MODE_ON_RUN` requires `InfoRequest.supports_recreate_on_run`. Only `RunImageRequest.allow_recreate=true` authorizes replacement; validate before removal. Otherwise duplicates return `AlreadyExists` without mutation.
 
-[runtime.proto](proto/devsy/runtime/v1/runtime.proto) defines the RPC schema.
+[runtime.proto](proto/devsy/runtime/v1/runtime.proto) specifies RPCs.
 
 ## Test and develop
 
-Pass `Connect`, `Workspace`, and `Command` to `conformance.Run`. Map `Command` to argv with `tty=false`:
+Pass `Connect`, `Workspace`, and `Command` to `conformance.Run`. `Command` returns `*runtimev1.ExecStart` with matching `workspace_id`, `tty=false`, and nonempty argv. Map scenarios:
 
 - `Echo`: stdin to stdout until `CloseStdin`; exit 0.
 - `Arguments`: each `ArgumentValues()` value then NUL on stdout; exit 0.
@@ -47,4 +45,4 @@ mise exec -- go test -race ./...
 mise exec -- go vet ./...
 ```
 
-After schema changes, run `mise exec -- go generate ./...` and check for drift.
+Schema changes: `mise exec -- go generate ./...`; check for drift.
