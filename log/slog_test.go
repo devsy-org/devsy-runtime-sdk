@@ -58,7 +58,7 @@ func (inlineCollisionValue) LogValue() slog.Value {
 
 func TestPluginLoggerProcess(t *testing.T) {
 	if os.Getenv("DEVSY_TEST_LOG_CHILD") == "1" {
-		runLogChild(t)
+		checkLoggerStdout(t, func() { runLogChild(t) })
 		return
 	}
 
@@ -172,6 +172,31 @@ func runLogChild(t *testing.T) {
 	logger.Info("first remains")
 }
 
+func checkLoggerStdout(t *testing.T, logCalls func()) {
+	t.Helper()
+	file, err := os.CreateTemp(t.TempDir(), "logger-stdout-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = file.Close() }()
+	func() {
+		original := os.Stdout
+		os.Stdout = file
+		defer func() { os.Stdout = original }()
+		logCalls()
+	}()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	output, err := os.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(output) != 0 {
+		t.Fatalf("logger wrote to stdout: %q", output)
+	}
+}
+
 func checkLogCase(t *testing.T, tc logCase) {
 	t.Helper()
 	executable, err := os.Executable()
@@ -188,10 +213,7 @@ func checkLogCase(t *testing.T, tc logCase) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
-		t.Fatalf("child: %v; stderr: %s", err, stderr.String())
-	}
-	if stdout.String() != "PASS\n" {
-		t.Fatalf("unexpected stdout: %q", stdout.String())
+		t.Fatalf("child: %v; stdout: %s; stderr: %s", err, stdout.String(), stderr.String())
 	}
 	output := stderr.String()
 	checkMessages(t, output, tc)
@@ -303,7 +325,7 @@ func checkNestedRecord(t *testing.T, record map[string]any) {
 
 func TestReservedAttributeCollisions(t *testing.T) {
 	if os.Getenv("DEVSY_TEST_COLLISIONS") == "1" {
-		emitCollisionRecords()
+		checkLoggerStdout(t, emitCollisionRecords)
 		return
 	}
 	output := runCollisionChild(t)
@@ -409,10 +431,7 @@ func runCollisionChild(t *testing.T) string {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
-		t.Fatalf("child: %v; stderr: %s", err, stderr.String())
-	}
-	if stdout.String() != "PASS\n" {
-		t.Fatalf("unexpected stdout: %q", stdout.String())
+		t.Fatalf("child: %v; stdout: %s; stderr: %s", err, stdout.String(), stderr.String())
 	}
 	return stderr.String()
 }
