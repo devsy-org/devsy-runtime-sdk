@@ -22,6 +22,23 @@ API 1.1: `remote_user` owns workspaces; `user` selects the process user. API 1.2
 
 [runtime.proto](proto/devsy/runtime/v1/runtime.proto) specifies RPCs.
 
+## Plugin logging
+
+Use `log.NewPluginLogger` to write structured provider diagnostics to stderr:
+
+```go
+import pluginlog "github.com/devsy-org/devsy-runtime-sdk/log"
+
+logger := pluginlog.NewPluginLogger("example")
+logger.Info("workspace started", "workspace_id", workspaceID)
+```
+
+The logger uses newline-delimited JSON with `ts`, `level`, and `msg` fields by default. It adds `component=provider` and the supplied provider name. `DEVSY_LOG_LEVEL` accepts `error`, `warn`, `info`, `debug`, or `trace`, and defaults to `info`. `DEVSY_LOG_FORMAT` accepts `json`, `text`, `plain`, or `auto`. Empty and `auto` select JSON. Invalid values fall back to the defaults and produce a warning without including the invalid value. Configuration is read when each logger is constructed.
+
+At the root, caller attributes and group names `ts`, `time`, `level`, `msg`, `message`, `component`, and `provider` receive a `user_` prefix. This also applies to attributes in inline groups. Nested named groups retain their original keys. Reserve the `user_` prefix for collision escaping to avoid duplicate keys.
+
+The logger does not redact application-provided values. Avoid logging secrets. Host-side redaction remains necessary. Logging a fatal severity does not terminate the process.
+
 ## Test and develop
 
 Pass `Connect`, `Workspace`, and `Command` to `conformance.Run`. `Command` returns `*runtimev1.ExecStart` with matching `workspace_id`, `tty=false`, and nonempty argv. Map scenarios:

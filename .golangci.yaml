@@ -39,6 +39,20 @@ linters:
       - path: ".*\\.pb\\.go$"
         linters:
           - lll
+      - path: '^log/slog\.go$'
+        linters:
+          - revive
+        text: '^(package-comments: should have a package comment|exported: exported function NewPluginLogger should have comment or be unexported)$'
+      - path: '^log/slog_test\.go$'
+        linters:
+          - gosec
+        text: '^G204: Subprocess launched with variable$'
+        source: '^\s*cmd := exec\.Command\(executable, "-test\.run=\^TestPluginLoggerProcess\$"\)$'
+      - path: '^log/slog_test\.go$'
+        linters:
+          - gosec
+        text: '^G204: Subprocess launched with variable$'
+        source: '^\s*cmd := exec\.Command\(executable, "-test\.run=\^TestReservedAttributeCollisions\$"\)$'
   settings:
     cyclop:
       max-complexity: 8
