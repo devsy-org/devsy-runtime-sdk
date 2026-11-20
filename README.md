@@ -33,11 +33,11 @@ logger := pluginlog.NewPluginLogger("example")
 logger.Info("workspace started", "workspace_id", workspaceID)
 ```
 
-The logger uses newline-delimited JSON with `ts`, `level`, and `msg` fields by default. It adds `component=provider` and the supplied provider name. `DEVSY_LOG_LEVEL` accepts `error`, `warn`, `info`, `debug`, or `trace`, and defaults to `info`. `DEVSY_LOG_FORMAT` accepts `json`, `text`, `plain`, or `auto`. Empty and `auto` select JSON. Invalid values fall back to the defaults and produce a warning without including the invalid value. Configuration is read when each logger is constructed.
+The logger uses newline-delimited JSON with `ts`, `level`, and `msg` fields by default. It adds `component=provider` and the supplied provider name. `DEVSY_LOG_LEVEL` accepts `error`, `warn`, `info`, `debug`, or `trace`, and defaults to `info`. `DEVSY_LOG_FORMAT` accepts `json`, `text`, `plain`, `logfmt`, or `auto`. Empty and `auto` select JSON; `text`, `plain`, and `logfmt` select text. Values are case-insensitive and whitespace is not trimmed. Each invalid field independently falls back to `info` for the level or JSON for the format. The SDK emits one warning per invalid field when constructing a logger, without including the invalid value, even if the configured level would normally filter warnings. Configuration is read when each logger is constructed.
 
 At the root, caller attributes and group names `ts`, `time`, `level`, `msg`, `message`, `component`, and `provider` receive a `user_` prefix. This also applies to attributes in inline groups. Nested named groups retain their original keys. Reserve the `user_` prefix for collision escaping to avoid duplicate keys.
 
-The logger does not redact application-provided values. Avoid logging secrets. Host-side redaction remains necessary. Logging a fatal severity does not terminate the process.
+The logger masks values selected from credential-like environment variable names and recognizable URL userinfo and Authorization header credentials. This applies to diagnostic messages, keys, groups, and nested values. It cannot discover every secret. Avoid logging sensitive input, and retain host-side redaction as a separate boundary. Logging a fatal severity does not terminate the process.
 
 ## Test and develop
 

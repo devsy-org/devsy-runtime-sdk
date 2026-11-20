@@ -46,6 +46,12 @@ type logCase struct {
 
 type resolvedValue struct{}
 
+const (
+	firstFormatWarning  = "first:invalid DEVSY_LOG_FORMAT; using json"
+	secondFormatWarning = "second:invalid DEVSY_LOG_FORMAT; using json"
+	providerComponent   = "component=provider"
+)
+
 func (resolvedValue) LogValue() slog.Value {
 	return slog.GroupValue(slog.Int("count", 7), slog.Bool("ready", true))
 }
@@ -118,9 +124,9 @@ func formatCases() []logCase {
 			present: []string{infoMessage},
 			absent:  []string{"secret-level", invalidFormat, debugMessage},
 			warnings: map[string]int{
-				"first:invalid DEVSY_LOG_LEVEL; using info":   1,
-				"first:invalid DEVSY_LOG_FORMAT; using json":  1,
-				"second:invalid DEVSY_LOG_FORMAT; using json": 1,
+				"first:invalid DEVSY_LOG_LEVEL; using info": 1,
+				firstFormatWarning:                          1,
+				secondFormatWarning:                         1,
 			},
 		},
 		{
@@ -130,22 +136,40 @@ func formatCases() []logCase {
 			present: []string{errorMessage},
 			absent:  []string{invalidFormat, infoMessage},
 			warnings: map[string]int{
-				"first:invalid DEVSY_LOG_FORMAT; using json":  1,
-				"second:invalid DEVSY_LOG_FORMAT; using json": 1,
+				firstFormatWarning:  1,
+				secondFormatWarning: 1,
 			},
 		},
+		{
+			name:    "unknown format at error level",
+			level:   errorLevel,
+			format:  "unknown-format",
+			present: []string{errorMessage},
+			absent:  []string{infoMessage, "unknown-format"},
+			warnings: map[string]int{
+				firstFormatWarning:  1,
+				secondFormatWarning: 1,
+			},
+		},
+		{name: "case folded", level: "DEBUG", format: "AUTO", present: []string{debugMessage}},
 		{name: "auto", format: "auto", present: []string{infoMessage}},
 		{name: "json", format: "json", present: []string{infoMessage}},
 		{
 			name:    "text",
 			format:  "text",
-			present: []string{infoMessage, "component=provider", "provider=first"},
+			present: []string{infoMessage, providerComponent, "provider=first"},
 			text:    true,
 		},
 		{
 			name:    "plain",
 			format:  "plain",
-			present: []string{infoMessage, "component=provider"},
+			present: []string{infoMessage, providerComponent},
+			text:    true,
+		},
+		{
+			name:    "logfmt",
+			format:  "LoGfMt",
+			present: []string{infoMessage, providerComponent, "provider=first"},
 			text:    true,
 		},
 	}
@@ -159,6 +183,7 @@ func runLogChild(t *testing.T) {
 	logger.Info(infoMessage)
 	logger.Warn(warnMessage)
 	logger.Error(errorMessage)
+	logger.Error("credential canary", "value", os.Getenv("DEVSY_TEST_API_TOKEN"))
 	logger.Log(context.Background(), slog.Level(12), fatalMessage)
 	logger.With("request", 42).
 		WithGroup("operation").
@@ -209,6 +234,7 @@ func checkLogCase(t *testing.T, tc logCase) {
 		"DEVSY_TEST_LOG_CHILD=1",
 		"DEVSY_LOG_LEVEL="+tc.level,
 		"DEVSY_LOG_FORMAT="+tc.format,
+		"DEVSY_TEST_API_TOKEN=unique-private-environment-canary-67291",
 	)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -216,6 +242,10 @@ func checkLogCase(t *testing.T, tc logCase) {
 		t.Fatalf("child: %v; stdout: %s; stderr: %s", err, stdout.String(), stderr.String())
 	}
 	output := stderr.String()
+	if strings.Contains(output, "unique-private-environment-canary-67291") ||
+		!strings.Contains(output, "***") {
+		t.Fatalf("environment credential not redacted: %s", output)
+	}
 	checkMessages(t, output, tc)
 	if !tc.text {
 		checkJSONRecords(t, output, tc.warnings)
