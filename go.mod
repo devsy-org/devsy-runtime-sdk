@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/devsy-org/devsy/logging v0.0.0-20261121002232-42213a6fbc3f
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
