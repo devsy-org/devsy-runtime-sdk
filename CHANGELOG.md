@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.6.0...v1.7.0) (2026-11-21)
+
+
+### Features
+
+* **log:** adopt the shared plugin logger ([0f2b493](https://github.com/devsy-org/devsy-runtime-sdk/commit/0f2b4937cc5936d655801bc6e244cf7d2a1d67d8))
+
 ## [1.6.0](https://github.com/devsy-org/devsy-runtime-sdk/compare/v1.5.2...v1.6.0) (2026-10-11)
 
 
