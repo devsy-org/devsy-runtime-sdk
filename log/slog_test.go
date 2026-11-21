@@ -229,13 +229,12 @@ func checkLogCase(t *testing.T, tc logCase) {
 		t.Fatal(err)
 	}
 	cmd := exec.Command(executable, "-test.run=^TestPluginLoggerProcess$")
-	cmd.Env = append(
-		os.Environ(),
+	cmd.Env = []string{
 		"DEVSY_TEST_LOG_CHILD=1",
-		"DEVSY_LOG_LEVEL="+tc.level,
-		"DEVSY_LOG_FORMAT="+tc.format,
+		"DEVSY_LOG_LEVEL=" + tc.level,
+		"DEVSY_LOG_FORMAT=" + tc.format,
 		"DEVSY_TEST_API_TOKEN=unique-private-environment-canary-67291",
-	)
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -452,12 +451,11 @@ func runCollisionChild(t *testing.T) string {
 		t.Fatal(err)
 	}
 	cmd := exec.Command(executable, "-test.run=^TestReservedAttributeCollisions$")
-	cmd.Env = append(
-		os.Environ(),
+	cmd.Env = []string{
 		"DEVSY_TEST_COLLISIONS=1",
 		"DEVSY_LOG_LEVEL=info",
 		"DEVSY_LOG_FORMAT=json",
-	)
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
